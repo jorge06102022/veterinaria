@@ -1,0 +1,192 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Dashboard — POS Pro{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-end mb-3">
+    <a href="{% url 'reporte_diario' %}" class="btn-accent">
+        <i class="bi bi-printer me-1"></i> Imprimir reporte del día
+    </a>
+    <a href="{% url 'egresos_page' %}" class="btn-accent ms-2">
+        <i class="bi bi-cash-coin me-1"></i> Registrar egreso
+    </a>
+    <a href="{% url 'eliminar_egresos' %}" 
+   class="btn btn-danger ms-2"
+   onclick="return confirm('¿Seguro que quieres borrar TODOS los egresos?')">
+   🗑 Borrar egresos
+</a>
+
+</div>
+
+<!-- 🔥 Stat Cards Row (ACTUALIZADO) -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card accent">
+            <div class="stat-icon accent"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-label">Ventas Hoy</div>
+            <div class="stat-value">${{ total_hoy|floatformat:0 }}</div>
+            <div class="stat-sub">{{ num_ventas_hoy }} transacciones</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card success">
+            <div class="stat-icon success"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="stat-label">Ganancia Hoy</div>
+            <div class="stat-value">${{ ganancia_hoy|floatformat:0 }}</div>
+            <div class="stat-sub">Ganancia del sistema</div>
+        </div>
+    </div>
+
+    <!-- 🔥 NUEVO -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card danger">
+            <div class="stat-icon danger"><i class="bi bi-cash-coin"></i></div>
+            <div class="stat-label">Egresos Hoy</div>
+            <div class="stat-value">${{ egresos_hoy|floatformat:0 }}</div>
+            <div class="stat-sub">Gastos del día</div>
+        </div>
+    </div>
+
+    <!-- 🔥 NUEVO -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card info">
+            <div class="stat-icon info"><i class="bi bi-calculator"></i></div>
+            <div class="stat-label">Utilidad Real</div>
+            <div class="stat-value">${{ utilidad_real_hoy|floatformat:0 }}</div>
+            <div class="stat-sub">Ganancia - egresos</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-8">
+        <div class="card-pos">
+            <div class="card-pos-header">
+                <span><i class="bi bi-activity me-2" style="color:var(--accent)"></i>
+                    Ventas, Ganancias y Egresos — Últimos 7 Días
+                </span>
+            </div>
+            <div class="card-pos-body">
+                <canvas id="chart7dias" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card-pos h-100">
+            <div class="card-pos-header">
+                <span><i class="bi bi-trophy me-2" style="color:var(--warning)"></i>Top Productos (Mes)</span>
+            </div>
+            <div class="card-pos-body">
+                {% for p in top_productos %}
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-2" style="min-width:0">
+                        <span class="badge-pos badge-accent">{{ forloop.counter }}</span>
+                        <div>
+                            <div style="font-size:13px;font-weight:600">{{ p.producto__nombre }}</div>
+                            <div style="font-size:11px;color:var(--text-muted)">{{ p.total_qty }} unidades</div>
+                        </div>
+                    </div>
+                    <div style="font-weight:700">${{ p.total_ingresos|floatformat:0 }}</div>
+                </div>
+                {% empty %}
+                <p style="text-align:center;color:var(--text-muted)">Sin ventas este mes</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Sales -->
+<div class="row g-3">
+    <div class="col-xl-8">
+        <div class="card-pos">
+            <div class="card-pos-header">
+                <span><i class="bi bi-receipt me-2"></i>Últimas Ventas</span>
+            </div>
+            <div class="card-pos-body p-0">
+                <table class="table table-pos mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha</th>
+                            <th>Productos</th>
+                            <th>Pago</th>
+                            <th>Total</th>
+                            <th>Ganancia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for venta in ultimas_ventas %}
+                        <tr>
+                            <td>#{{ venta.pk }}</td>
+                            <td>{{ venta.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>{{ venta.detalles.count }}</td>
+                            <td>{{ venta.get_metodo_pago_display }}</td>
+                            <td>${{ venta.total_venta|floatformat:0 }}</td>
+                            <td style="color:green">${{ venta.total_ganancia|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+// 🔥 DATOS
+const labels7 = {{ labels_7dias|safe }};
+const dataV7 = {{ data_ventas_7dias|safe }};
+const dataG7 = {{ data_ganancias_7dias|safe }};
+const dataE7 = {{ data_egresos_7dias|safe }}; // 👈 NUEVO
+
+const ctx7 = document.getElementById('chart7dias').getContext('2d');
+
+new Chart(ctx7, {
+    type: 'bar',
+    data: {
+        labels: labels7,
+        datasets: [
+            {
+                label: 'Ventas',
+                data: dataV7,
+                backgroundColor: 'rgba(108,99,255,0.5)',
+                borderColor: '#6c63ff',
+                borderWidth: 2,
+                order: 3
+            },
+            {
+                label: 'Ganancias',
+                data: dataG7,
+                type: 'line',
+                borderColor: '#22c55e',
+                backgroundColor: 'rgba(34,197,94,0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                order: 2
+            },
+            {
+                label: 'Egresos',
+                data: dataE7,
+                type: 'line',
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239,68,68,0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                order: 1
+            }
+        ]
+    }
+});
+
+</script>
+{% endblock %}

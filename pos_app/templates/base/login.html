@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NexSales — Iniciar Sesión</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif;background:#000;color:#fff;overflow:hidden}
+
+canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+.wrap{
+  position:relative;z-index:10;
+  display:flex;min-height:100vh;
+}
+
+/* ── LEFT ── */
+.left{
+  flex:1;
+  display:flex;flex-direction:column;justify-content:space-between;
+  padding:56px 60px;
+  border-right:1px solid rgba(255,255,255,0.06);
+}
+
+.logo{display:flex;align-items:center;gap:12px}
+.logo-mark{
+  width:36px;height:36px;border-radius:10px;
+  background:#fff;
+  display:flex;align-items:center;justify-content:center;
+}
+.logo-mark svg{width:20px;height:20px}
+.logo-name{font-size:15px;font-weight:700;letter-spacing:-.3px;color:#fff}
+
+.hero{display:flex;flex-direction:column;gap:24px}
+.hero h1{
+  font-size:clamp(40px,4.5vw,68px);
+  font-weight:900;
+  letter-spacing:-3px;
+  line-height:.95;
+  color:#fff;
+}
+.hero h1 span{color:rgba(255,255,255,.22)}
+.hero p{
+  font-size:14px;color:rgba(255,255,255,.45);
+  line-height:1.7;max-width:340px;font-weight:400;
+}
+
+.stats{
+  display:flex;gap:0;
+  border-top:1px solid rgba(255,255,255,0.07);
+  padding-top:32px;
+}
+.stat{flex:1;display:flex;flex-direction:column;gap:4px;padding-right:28px}
+.stat:not(:last-child){
+  border-right:1px solid rgba(255,255,255,.07);
+  margin-right:28px;
+}
+.stat .n{font-size:28px;font-weight:700;letter-spacing:-1px;color:#fff}
+.stat .n.g{color:#4ade80}
+.stat .l{
+  font-size:10px;color:rgba(255,255,255,.3);
+  text-transform:uppercase;letter-spacing:.1em;margin-top:2px;
+}
+
+/* ── RIGHT ── */
+.right{
+  width:480px;flex-shrink:0;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:60px 56px;
+  position:relative;
+  background:rgba(255,255,255,.015);
+}
+.right::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.1) 50%,transparent);
+}
+
+.form-head{margin-bottom:44px}
+.form-head .tag{
+  font-size:10px;font-weight:600;
+  letter-spacing:.15em;text-transform:uppercase;
+  color:rgba(255,255,255,.3);margin-bottom:16px;
+}
+.form-head h2{
+  font-size:28px;font-weight:700;
+  letter-spacing:-.8px;color:#fff;line-height:1.1;
+}
+.form-head h2 span{color:rgba(255,255,255,.3)}
+
+.error-bar{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(239,68,68,.08);
+  border:1px solid rgba(239,68,68,.2);
+  border-radius:10px;padding:10px 14px;
+  font-size:12px;color:#f87171;margin-bottom:20px;
+}
+.error-dot{width:5px;height:5px;border-radius:50%;background:#f87171;flex-shrink:0}
+
+.field{margin-bottom:16px}
+.field-label{
+  font-size:11px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.35);margin-bottom:8px;
+}
+.input-shell{position:relative;display:flex;align-items:center}
+.input-shell input{
+  width:100%;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.09);
+  color:#fff;border-radius:12px;
+  padding:14px 44px 14px 16px;
+  font-size:14px;font-family:'Inter',sans-serif;font-weight:400;
+  outline:none;
+  transition:border-color .2s,background .2s;
+}
+.input-shell input::placeholder{color:rgba(255,255,255,.2)}
+.input-shell input:focus{
+  border-color:rgba(255,255,255,.28);
+  background:rgba(255,255,255,.07);
+}
+.input-shell .ic{
+  position:absolute;right:15px;
+  color:rgba(255,255,255,.25);
+  font-size:15px;cursor:pointer;
+  transition:color .2s;
+}
+.input-shell input:focus ~ .ic{color:rgba(255,255,255,.5)}
+
+.btn{
+  width:100%;background:#fff;color:#000;
+  border:none;border-radius:12px;padding:15px;
+  font-size:14px;font-weight:700;font-family:'Inter',sans-serif;
+  cursor:pointer;margin-top:8px;
+  transition:opacity .15s,transform .15s;
+  letter-spacing:-.2px;
+}
+.btn:hover{opacity:.88;transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
+
+.divider{height:1px;background:rgba(255,255,255,.06);margin:28px 0}
+
+.features{display:flex;flex-direction:column;gap:12px}
+.feat{display:flex;align-items:center;gap:12px}
+.feat-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0}
+.feat span{font-size:12px;color:rgba(255,255,255,.4)}
+
+.foot{margin-top:32px;display:flex;align-items:center;gap:8px}
+.foot .fl{font-size:11px;color:rgba(255,255,255,.2)}
+.ssl{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(74,222,128,.07);
+  border:1px solid rgba(74,222,128,.15);
+  border-radius:100px;padding:4px 10px;
+}
+.ssl-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:#4ade80;
+  animation:blink 2s infinite;
+}
+.ssl span{font-size:10px;color:#4ade80;font-weight:600}
+
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:900px){
+  .left{display:none}
+  .right{width:100%;padding:40px 28px}
+  html,body{overflow:auto}
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div class="wrap">
+
+  <!-- LEFT — identidad de marca -->
+  <div class="left">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="7" height="7" rx="2" fill="#000"/>
+          <rect x="11" y="2" width="7" height="7" rx="2" fill="#000"/>
+          <rect x="2" y="11" width="7" height="7" rx="2" fill="#000"/>
+          <rect x="11" y="11" width="7" height="7" rx="2" fill="#000" opacity=".35"/>
+        </svg>
+      </div>
+      <span class="logo-name">NexSales</span>
+    </div>
+
+    <div class="hero">
+      <h1>Control<br/><span>total</span><br/>del negocio</h1>
+      <p>Ventas, inventario y reportes en una sola plataforma. Diseñada para escalar sin límites.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="n g">99.9%</span>
+        <span class="l">Uptime</span>
+      </div>
+      <div class="stat">
+        <span class="n">∞</span>
+        <span class="l">Ventas</span>
+      </div>
+      <div class="stat">
+        <span class="n">24/7</span>
+        <span class="l">Soporte</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT — formulario -->
+  <div class="right">
+
+    <div class="form-head">
+      <p class="tag">Acceso al sistema</p>
+      <h2>Bienvenido<br/><span>de vuelta</span></h2>
+    </div>
+
+    {% if form.errors %}
+    <div class="error-bar">
+      <div class="error-dot"></div>
+      Credenciales incorrectas. Inténtalo de nuevo.
+    </div>
+    {% endif %}
+
+    <form method="post" id="lf">
+      {% csrf_token %}
+
+      <div class="field">
+        <div class="field-label">Usuario</div>
+        <div class="input-shell">
+          <input type="text" name="username" id="id_username"
+                 placeholder="tu.usuario"
+                 autocomplete="username" spellcheck="false"/>
+          <i class="bi bi-at ic"></i>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Contraseña</div>
+        <div class="input-shell">
+          <input type="password" name="password" id="id_password"
+                 placeholder="••••••••"
+                 autocomplete="current-password"/>
+          <i class="bi bi-eye ic" id="eye-toggle"></i>
+        </div>
+      </div>
+
+      <button type="submit" class="btn" id="submit-btn">
+        <div class="btn-inner" id="btn-inner">
+          <span>Entrar al sistema</span>
+          <i class="bi bi-arrow-right"></i>
+        </div>
+      </button>
+    </form>
+
+    <div class="divider"></div>
+
+    <div class="features">
+      <div class="feat"><div class="feat-dot"></div><span>Reportes en tiempo real</span></div>
+      <div class="feat"><div class="feat-dot"></div><span>Control de inventario y alertas automáticas</span></div>
+      <div class="feat"><div class="feat-dot"></div><span>Facturación y exportación PDF</span></div>
+    </div>
+
+    <div class="foot">
+      <span class="fl">Conexión segura</span>
+      <div class="ssl">
+        <div class="ssl-dot"></div>
+        <span>SSL Activo</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ── CANVAS PARTÍCULAS ── */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, pts = [];
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); init(); });
+
+function init() {
+  pts = [];
+  const n = Math.floor(W * H / 22000);
+  for (let i = 0; i < n; i++) {
+    pts.push({
+      x:  Math.random() * W,
+      y:  Math.random() * H,
+      vx: (Math.random() - .5) * .3,
+      vy: (Math.random() - .5) * .3,
+      r:  Math.random() * .8 + .2,
+      o:  Math.random() * .4 + .1,
+    });
+  }
+}
+init();
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  pts.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${p.o})`;
+    ctx.fill();
+  });
+  for (let i = 0; i < pts.length; i++) {
+    for (let j = i + 1; j < pts.length; j++) {
+      const dx = pts[i].x - pts[j].x;
+      const dy = pts[i].y - pts[j].y;
+      const d  = Math.sqrt(dx * dx + dy * dy);
+      if (d < 80) {
+        ctx.beginPath();
+        ctx.moveTo(pts[i].x, pts[i].y);
+        ctx.lineTo(pts[j].x, pts[j].y);
+        ctx.strokeStyle = `rgba(255,255,255,${.05 * (1 - d / 80)})`;
+        ctx.lineWidth = .5;
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* ── TOGGLE CONTRASEÑA ── */
+const eyeBtn  = document.getElementById('eye-toggle');
+const pwInput = document.getElementById('id_password');
+eyeBtn.addEventListener('click', () => {
+  const visible = pwInput.type === 'text';
+  pwInput.type  = visible ? 'password' : 'text';
+  eyeBtn.className = visible
+    ? 'bi bi-eye ic'
+    : 'bi bi-eye-slash ic';
+});
+
+/* ── ENTER ENTRE CAMPOS ── */
+document.getElementById('id_username').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('id_password').focus(); }
+});
+
+/* ── LOADING STATE ── */
+document.getElementById('lf').addEventListener('submit', () => {
+  const btn   = document.getElementById('submit-btn');
+  const inner = document.getElementById('btn-inner');
+  inner.innerHTML = `<i class="bi bi-arrow-repeat" style="display:inline-block;animation:spin .7s linear infinite"></i><span>Verificando...</span>`;
+  btn.disabled = true;
+  btn.style.opacity = '.6';
+});
+</script>
+</body>
+</html>
