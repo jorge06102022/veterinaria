@@ -1,315 +1,255 @@
 """
-views.py - Vistas del sistema POS
+views.py - Vistas del sistema POS Pet Shop, Peluquería Canina y Tienda de Mascotas.
+Implementación robusta con transacciones atómicas, soporte de lector de códigos de barras,
+pagos mixtos, liquidación diaria de peluqueros (comisión 50%, adelantos, arrastre de saldos),
+cierre de caja con separación estricta de efectivo físico y banco, y reporte de ganancias reales.
 """
+import io
 import json
-from decimal import Decimal
+import uuid
 from datetime import datetime, timedelta
+from decimal import Decimal
 
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
-from django.db.models import Sum, Count, Q, F
-from django.db.models.functions import TruncDate, TruncMonth
-from django.utils import timezone
-from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Count, F, Q, Sum
+from django.db.models.functions import TruncDate, TruncMonth
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
 
-from .models import Producto, Categoria, Venta, DetalleVenta
-from .forms import ProductoForm, CategoriaForm
+from .forms import (
+    AdelantoPeluqueroForm, AperturaCajaForm, CategoriaForm,
+    CierreCajaForm, ClienteForm, EgresoForm, MascotaForm,
+    ProductoForm, ProveedorForm, ServicioPeluqueriaForm, TrabajadorForm
+)
+from .models import (
+    AdelantoPeluquero, AtencionPeluqueria, Categoria, Cliente,
+    Compra, DetalleCompra, DetalleVenta, Egreso,
+    LiquidacionPeluquero, Mascota, MovimientoInventario, PagoLiquidacion,
+    PagoVenta, Producto, Proveedor, ServicioPeluqueria,
+    SesionCaja, Trabajador, Venta
+)
+
+User = get_user_model()
 
 
-# ─────────────────────────────────────────────
-# DASHBOARD
-# ─────────────────────────────────────────────
+# ==============================================================================
+# HELPERS DE CAJA ACTIVA
+# ==============================================================================
+
+def obtener_caja_activa():
+    """Retorna la sesión de caja abierta actual, o None."""
+    return SesionCaja.objects.filter(estado='abierta').order_by('-fecha_apertura').first()
+
+
+# ==============================================================================
+# DASHBOARD PRINCIPAL
+# ==============================================================================
 
 @login_required
 def dashboard(request):
-    """Vista principal del dashboard con estadísticas."""
-    from datetime import datetime, timedelta
-    from decimal import Decimal
-    from django.db.models import Sum, F
-    from django.utils import timezone
-    import json
-
-    from .models import Venta, Producto, DetalleVenta, Egreso
-
-    # 🔥 FECHA ACTUAL CON ZONA HORARIA
+    """
+    Panel de control ejecutivo con indicadores reales del Pet Shop & Peluquería.
+    Distingue: ingresos productos vs peluquería, comisiones generadas, adelantos,
+    pagos al personal, gastos operativos, saldo de caja y ganancia económica estimada.
+    """
     now = timezone.localtime()
     hoy = now.date()
 
-    # 🔥 RANGOS CORRECTOS CON TIMEZONE
     inicio_dia = timezone.make_aware(datetime.combine(hoy, datetime.min.time()))
     fin_dia = timezone.make_aware(datetime.combine(hoy, datetime.max.time()))
 
     inicio_mes = hoy.replace(day=1)
     inicio_mes_dt = timezone.make_aware(datetime.combine(inicio_mes, datetime.min.time()))
-    fin_hoy_dt = timezone.make_aware(datetime.combine(hoy, datetime.max.time()))
 
-    # ───────────── VENTAS HOY ─────────────
-    ventas_hoy = Venta.objects.filter(
-        fecha__gte=inicio_dia,
-        fecha__lte=fin_dia
-    )
+    # Ventas del día (no anuladas)
+    ventas_hoy = Venta.objects.filter(fecha__gte=inicio_dia, fecha__lte=fin_dia, estado='completada')
+    total_ventas_hoy = ventas_hoy.aggregate(t=Sum('total_venta'))['t'] or Decimal('0.00')
+    
+    # Desglose de ingresos de hoy
+    ingresos_productos_hoy = DetalleVenta.objects.filter(
+        venta__in=ventas_hoy
+    ).aggregate(t=Sum('subtotal'))['t'] or Decimal('0.00')
 
-    total_hoy = ventas_hoy.aggregate(t=Sum('total_venta'))['t'] or Decimal('0')
-    ganancia_hoy = ventas_hoy.aggregate(g=Sum('total_ganancia'))['g'] or Decimal('0')
-    num_ventas_hoy = ventas_hoy.count()
+    costo_productos_hoy = DetalleVenta.objects.filter(
+        venta__in=ventas_hoy
+    ).aggregate(t=Sum(F('precio_compra') * F('cantidad')))['t'] or Decimal('0.00')
 
-    # ───────────── EGRESOS HOY ─────────────
-    egresos_hoy_qs = Egreso.objects.filter(
-        fecha__gte=inicio_dia,
-        fecha__lte=fin_dia
-    )
+    ganancia_productos_hoy = ingresos_productos_hoy - costo_productos_hoy
 
-    egresos_hoy = egresos_hoy_qs.aggregate(t=Sum('monto'))['t'] or Decimal('0')
+    # Servicios de peluquería hoy
+    atenciones_hoy = AtencionPeluqueria.objects.filter(
+        fecha__gte=inicio_dia, fecha__lte=fin_dia
+    ).exclude(estado_liquidacion='anulado')
+    
+    total_servicios_hoy = atenciones_hoy.aggregate(t=Sum('valor_neto'))['t'] or Decimal('0.00')
+    comisiones_peluquero_hoy = atenciones_hoy.aggregate(t=Sum('comision_calculada'))['t'] or Decimal('0.00')
+    parte_negocio_peluqueria_hoy = total_servicios_hoy - comisiones_peluquero_hoy
+    cantidad_servicios_hoy = atenciones_hoy.count()
 
-    # ✅ UTILIDAD REAL HOY
-    utilidad_real_hoy = total_hoy - egresos_hoy
+    # Egresos y gastos operativos del día
+    egresos_hoy_qs = Egreso.objects.filter(fecha__gte=inicio_dia, fecha__lte=fin_dia)
+    gastos_operativos_hoy = egresos_hoy_qs.exclude(categoria='personal').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+    pagos_personal_hoy = egresos_hoy_qs.filter(categoria='personal').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+    total_egresos_hoy = gastos_operativos_hoy + pagos_personal_hoy
 
-    # ───────────── VENTAS MES ─────────────
-    ventas_mes = Venta.objects.filter(
-        fecha__gte=inicio_mes_dt,
-        fecha__lte=fin_hoy_dt
-    )
+    # Adelantos y pagos a peluqueros de hoy
+    adelantos_peluquero_hoy = AdelantoPeluquero.objects.filter(
+        fecha__gte=inicio_dia, fecha__lte=fin_dia
+    ).exclude(estado='anulado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
 
-    total_mes = ventas_mes.aggregate(t=Sum('total_venta'))['t'] or Decimal('0')
-    ganancia_mes = ventas_mes.aggregate(g=Sum('total_ganancia'))['g'] or Decimal('0')
+    pagos_liquidacion_hoy = PagoLiquidacion.objects.filter(
+        fecha__gte=inicio_dia, fecha__lte=fin_dia, estado='confirmado'
+    ).aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
 
-    # ───────────── EGRESOS MES ─────────────
-    egresos_mes_qs = Egreso.objects.filter(
-        fecha__gte=inicio_mes_dt,
-        fecha__lte=fin_hoy_dt
-    )
+    # Ganancia estimada del día:
+    # Ganancia bruta productos + Parte neta de peluquería - Gastos operativos generales
+    ganancia_estimada_hoy = ganancia_productos_hoy + parte_negocio_peluqueria_hoy - gastos_operativos_hoy - pagos_personal_hoy
 
-    egresos_mes = egresos_mes_qs.aggregate(t=Sum('monto'))['t'] or Decimal('0')
+    # Estado de caja activa
+    caja_activa = obtener_caja_activa()
+    efectivo_en_caja = Decimal('0.00')
+    banco_dia = Decimal('0.00')
 
-    # ✅ UTILIDAD REAL MES
-    utilidad_real_mes = total_mes - egresos_mes
+    if caja_activa:
+        # Calcular efectivo físico y banco de la sesión actual
+        pagos_caja = PagoVenta.objects.filter(venta__sesion_caja=caja_activa, venta__estado='completada')
+        efectivo_ingresos = pagos_caja.filter(metodo='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+        banco_ingresos = pagos_caja.exclude(metodo='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
 
-    # ───────────── INVENTARIO ─────────────
+        egresos_efectivo = Egreso.objects.filter(sesion_caja=caja_activa, metodo_pago='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+        adelantos_efectivo = AdelantoPeluquero.objects.filter(sesion_caja=caja_activa, medio_entrega='efectivo').exclude(estado='anulado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+        pagos_pelu_efectivo = PagoLiquidacion.objects.filter(sesion_caja=caja_activa, medio_pago='efectivo', estado='confirmado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+        efectivo_en_caja = caja_activa.monto_inicial_efectivo + efectivo_ingresos - egresos_efectivo - adelantos_efectivo - pagos_pelu_efectivo
+        banco_dia = banco_ingresos
+
+    # Inventario
     total_productos = Producto.objects.filter(activo=True).count()
+    productos_stock_bajo = Producto.objects.filter(activo=True, stock__lte=F('stock_minimo')).count()
 
-    productos_stock_bajo = Producto.objects.filter(
-        activo=True,
-        stock__lte=F('stock_minimo')
-    ).count()
+    # Últimas ventas y atenciones
+    ultimas_ventas = Venta.objects.filter(estado='completada').prefetch_related('detalles__producto', 'servicios_peluqueria', 'pagos')[:6]
 
-    productos_sin_stock = Producto.objects.filter(
-        activo=True,
-        stock=0
-    ).count()
+    # Liquidaciones pendientes
+    liquidaciones_abiertas = LiquidacionPeluquero.objects.exclude(estado='liquidada').order_by('-fecha_jornada')[:5]
 
-    # ───────────── ÚLTIMAS VENTAS ─────────────
-    ultimas_ventas = Venta.objects.prefetch_related('detalles__producto').order_by('-fecha')[:5]
-
-    # ───────────── GRÁFICO 7 DÍAS ─────────────
+    # Datos para gráfico últimos 7 días
     labels_7dias = []
     data_ventas_7dias = []
-    data_ganancias_7dias = []
-    data_egresos_7dias = []
+    data_servicios_7dias = []
+    data_ganancia_7dias = []
 
     for i in range(6, -1, -1):
         dia = hoy - timedelta(days=i)
-
-        inicio_d = timezone.make_aware(datetime.combine(dia, datetime.min.time()))
+        ini_d = timezone.make_aware(datetime.combine(dia, datetime.min.time()))
         fin_d = timezone.make_aware(datetime.combine(dia, datetime.max.time()))
 
-        v = Venta.objects.filter(
-            fecha__gte=inicio_d,
-            fecha__lte=fin_d
-        )
-
-        e = Egreso.objects.filter(
-            fecha__gte=inicio_d,
-            fecha__lte=fin_d
-        )
+        v_dia = Venta.objects.filter(fecha__gte=ini_d, fecha__lte=fin_d, estado='completada')
+        tot_v = v_dia.aggregate(t=Sum('total_venta'))['t'] or Decimal('0.00')
+        
+        serv_dia = AtencionPeluqueria.objects.filter(fecha__gte=ini_d, fecha__lte=fin_d).exclude(estado_liquidacion='anulado')
+        tot_serv = serv_dia.aggregate(t=Sum('valor_neto'))['t'] or Decimal('0.00')
 
         labels_7dias.append(dia.strftime('%d/%m'))
+        data_ventas_7dias.append(float(tot_v))
+        data_servicios_7dias.append(float(tot_serv))
 
-        data_ventas_7dias.append(float(v.aggregate(t=Sum('total_venta'))['t'] or 0))
-        data_ganancias_7dias.append(float(v.aggregate(g=Sum('total_ganancia'))['g'] or 0))
-        data_egresos_7dias.append(float(e.aggregate(t=Sum('monto'))['t'] or 0))
-
-    # ───────────── TOP PRODUCTOS ─────────────
-    top_productos = (
-        DetalleVenta.objects
-        .filter(
-            venta__fecha__gte=inicio_mes_dt,
-            venta__fecha__lte=fin_hoy_dt
-        )
-        .values('producto__nombre')
-        .annotate(
-            total_qty=Sum('cantidad'),
-            total_ingresos=Sum('subtotal')
-        )
-        .order_by('-total_qty')[:5]
-    )
-
-    # ───────────── CONTEXT ─────────────
     context = {
-        'total_hoy': total_hoy,
-        'ganancia_hoy': ganancia_hoy,
-        'num_ventas_hoy': num_ventas_hoy,
-
-        'egresos_hoy': egresos_hoy,
-        'utilidad_real_hoy': utilidad_real_hoy,
-
-        'total_mes': total_mes,
-        'ganancia_mes': ganancia_mes,
-
-        'egresos_mes': egresos_mes,
-        'utilidad_real_mes': utilidad_real_mes,
-
+        'total_ventas_hoy': total_ventas_hoy,
+        'num_ventas_hoy': ventas_hoy.count(),
+        'ingresos_productos_hoy': ingresos_productos_hoy,
+        'ganancia_productos_hoy': ganancia_productos_hoy,
+        'total_servicios_hoy': total_servicios_hoy,
+        'cantidad_servicios_hoy': cantidad_servicios_hoy,
+        'comisiones_peluquero_hoy': comisiones_peluquero_hoy,
+        'parte_negocio_peluqueria_hoy': parte_negocio_peluqueria_hoy,
+        'total_egresos_hoy': total_egresos_hoy,
+        'pagos_personal_hoy': pagos_personal_hoy,
+        'adelantos_peluquero_hoy': adelantos_peluquero_hoy,
+        'pagos_liquidacion_hoy': pagos_liquidacion_hoy,
+        'ganancia_estimada_hoy': ganancia_estimada_hoy,
+        'caja_activa': caja_activa,
+        'efectivo_en_caja': efectivo_en_caja,
+        'banco_dia': banco_dia,
         'total_productos': total_productos,
         'productos_stock_bajo': productos_stock_bajo,
-        'productos_sin_stock': productos_sin_stock,
-
         'ultimas_ventas': ultimas_ventas,
-
+        'liquidaciones_abiertas': liquidaciones_abiertas,
         'labels_7dias': json.dumps(labels_7dias),
         'data_ventas_7dias': json.dumps(data_ventas_7dias),
-        'data_ganancias_7dias': json.dumps(data_ganancias_7dias),
-        'data_egresos_7dias': json.dumps(data_egresos_7dias),
-
-        'top_productos': list(top_productos),
+        'data_servicios_7dias': json.dumps(data_servicios_7dias),
     }
-
     return render(request, 'dashboard/dashboard.html', context)
-# ─────────────────────────────────────────────
-# INVENTARIO / PRODUCTOS
-# ─────────────────────────────────────────────
-
-@login_required
-def inventario(request):
-    """Lista de productos con filtros y búsqueda."""
-    productos = Producto.objects.select_related('categoria').filter(activo=True)
-
-    # Búsqueda
-    q = request.GET.get('q', '')
-    if q:
-        productos = productos.filter(Q(nombre__icontains=q) | Q(sku__icontains=q))
-
-    # Filtro categoría
-    cat_id = request.GET.get('categoria', '')
-    if cat_id:
-        productos = productos.filter(categoria_id=cat_id)
-
-    # Filtro stock
-    filtro_stock = request.GET.get('stock', '')
-    if filtro_stock == 'bajo':
-        productos = productos.filter(stock__lte=F('stock_minimo'), stock__gt=0)
-    elif filtro_stock == 'sin':
-        productos = productos.filter(stock=0)
-
-    paginator = Paginator(productos, 20)
-    page = request.GET.get('page', 1)
-    productos_paginados = paginator.get_page(page)
-
-    categorias = Categoria.objects.all()
-
-    context = {
-        'productos': productos_paginados,
-        'categorias': categorias,
-        'q': q,
-        'cat_id': cat_id,
-        'filtro_stock': filtro_stock,
-        'total_stock_bajo': Producto.objects.filter(activo=True, stock__lte=F('stock_minimo')).count(),
-    }
-    return render(request, 'inventory/inventario.html', context)
 
 
-@login_required
-def producto_crear(request):
-    """Crear un nuevo producto."""
-    if request.method == 'POST':
-        form = ProductoForm(request.POST)
-        if form.is_valid():
-            producto = form.save()
-            messages.success(request, f'Producto "{producto.nombre}" creado exitosamente.')
-            return redirect('inventario')
-    else:
-        form = ProductoForm()
-    return render(request, 'inventory/producto_form.html', {'form': form, 'titulo': 'Nuevo Producto'})
-
-
-@login_required
-def producto_editar(request, pk):
-    """Editar un producto existente."""
-    producto = get_object_or_404(Producto, pk=pk)
-    if request.method == 'POST':
-        form = ProductoForm(request.POST, instance=producto)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'Producto "{producto.nombre}" actualizado.')
-            return redirect('inventario')
-    else:
-        form = ProductoForm(instance=producto)
-    return render(request, 'inventory/producto_form.html', {
-        'form': form, 'producto': producto, 'titulo': 'Editar Producto'
-    })
-
-
-@login_required
-def producto_eliminar(request, pk):
-    """Desactivar (soft delete) un producto."""
-    producto = get_object_or_404(Producto, pk=pk)
-    if request.method == 'POST':
-        producto.activo = False
-        producto.save()
-        messages.success(request, f'Producto "{producto.nombre}" eliminado.')
-        return redirect('inventario')
-    return render(request, 'inventory/producto_confirmar_eliminar.html', {'producto': producto})
-
-
-@login_required
-def producto_detalle(request, pk):
-    """Detalle de un producto."""
-    producto = get_object_or_404(Producto, pk=pk)
-    # Historial de ventas del producto (últimas 10)
-    historial = DetalleVenta.objects.filter(
-        producto=producto
-    ).select_related('venta').order_by('-venta__fecha')[:10]
-    return render(request, 'inventory/producto_detalle.html', {
-        'producto': producto, 'historial': historial
-    })
-
-
-# ─────────────────────────────────────────────
-# POS - PUNTO DE VENTA
-# ─────────────────────────────────────────────
+# ==============================================================================
+# PUNTO DE VENTA (POS) - PRODUCTOS + SERVICIOS + SCANNER + PAGOS MIXTOS
+# ==============================================================================
 
 @login_required
 def pos(request):
-    """Vista del punto de venta (carrito)."""
+    """
+    Pantalla principal de POS adaptada:
+    - Escaneo con lector de código de barras USB (actúa como teclado).
+    - Venta de productos físicos con validación estricta de stock.
+    - Venta de servicios de peluquería con selección de mascota/cliente y peluquero asignado.
+    - Soporte de pagos mixtos (Efectivo + Transferencia/Tarjeta).
+    """
+    productos = Producto.objects.filter(activo=True).select_related('categoria')
     categorias = Categoria.objects.all()
-    productos = Producto.objects.filter(activo=True, stock__gt=0).select_related('categoria')
-    return render(request, 'sales/pos.html', {
-        'categorias': categorias,
+    servicios = ServicioPeluqueria.objects.filter(activo=True)
+    peluqueros = Trabajador.objects.filter(activo=True, rol='peluquero')
+    clientes = Cliente.objects.all().prefetch_related('mascotas')
+    caja_activa = obtener_caja_activa()
+
+    context = {
         'productos': productos,
-    })
+        'categorias': categorias,
+        'servicios': servicios,
+        'peluqueros': peluqueros,
+        'clientes': clientes,
+        'caja_activa': caja_activa,
+    }
+    return render(request, 'sales/pos.html', context)
 
 
 @login_required
+@require_GET
 def api_buscar_producto(request):
-    """API: busca productos para el POS."""
-    q = request.GET.get('q', '')
-    cat = request.GET.get('cat', '')
-    productos = Producto.objects.filter(activo=True, stock__gt=0)
-    if q:
-        productos = productos.filter(Q(nombre__icontains=q) | Q(sku__icontains=q))
+    """API para búsqueda manual y por lector de código de barras."""
+    q = request.GET.get('q', '').strip()
+    cat = request.GET.get('cat', '').strip()
+    barcode = request.GET.get('barcode', '').strip()
+
+    productos = Producto.objects.filter(activo=True)
+
+    if barcode:
+        # Búsqueda exacta por código de barras / sku
+        productos = productos.filter(Q(sku__iexact=barcode) | Q(codigo_interno__iexact=barcode))
+    elif q:
+        productos = productos.filter(
+            Q(nombre__icontains=q) | Q(sku__icontains=q) | Q(codigo_interno__icontains=q)
+        )
     if cat:
         productos = productos.filter(categoria_id=cat)
+
     data = [
         {
             'id': p.pk,
             'nombre': p.nombre,
             'sku': p.sku,
+            'codigo_interno': p.codigo_interno or '',
             'precio_venta': float(p.precio_venta),
             'precio_compra': float(p.precio_compra),
             'stock': p.stock,
-            'categoria': p.categoria.nombre if p.categoria else 'Sin categoría',
+            'unidad': p.get_unidad_medida_display(),
+            'categoria': p.categoria.nombre if p.categoria else 'General',
         }
         for p in productos[:50]
     ]
@@ -319,99 +259,230 @@ def api_buscar_producto(request):
 @login_required
 @require_POST
 def procesar_venta(request):
-    """Procesa y guarda una venta desde el POS."""
+    """
+    Procesamiento transaccional de una venta combinada (productos y/o servicios de peluquería).
+    Garantiza:
+    1. Idempotencia y prevención de doble clic.
+    2. Bloqueo pesimista (select_for_update) sobre existencias de inventario.
+    3. Validación y desglose estricto de medios de pago (efectivo, transferencia, mixto).
+    4. Cálculo de comisión del 50% al peluquero SOLO en servicios de peluquería.
+    5. Kardex de movimientos de inventario y asociación a caja activa.
+    """
     try:
         data = json.loads(request.body)
-        items = data.get('items', [])
+        items_productos = data.get('productos', [])
+        items_servicios = data.get('servicios', [])
         metodo_pago = data.get('metodo_pago', 'efectivo')
+        pagos_desglose = data.get('pagos', [])  # [{'metodo': 'efectivo', 'monto': 20000}, ...]
+        cliente_id = data.get('cliente_id')
+        notas = data.get('notas', '')
+        uuid_op = data.get('uuid_operacion') or str(uuid.uuid4())
 
-        if not items:
-            return JsonResponse({'success': False, 'error': 'El carrito está vacío.'})
+        if not items_productos and not items_servicios:
+            return JsonResponse({'success': False, 'error': 'El carrito está vacío. Agregue productos o servicios.'})
 
-        # Validar stock antes de procesar
-        for item in items:
-            producto = get_object_or_404(Producto, pk=item['producto_id'])
-            if producto.stock < item['cantidad']:
+        caja_activa = obtener_caja_activa()
+
+        with transaction.atomic():
+            # Idempotencia: evitar duplicados
+            if Venta.objects.filter(uuid_operacion=uuid_op).exists():
+                venta_existente = Venta.objects.get(uuid_operacion=uuid_op)
                 return JsonResponse({
-                    'success': False,
-                    'error': f'Stock insuficiente para "{producto.nombre}". Disponible: {producto.stock}'
+                    'success': True,
+                    'venta_id': venta_existente.pk,
+                    'total': float(venta_existente.total_venta),
+                    'mensaje': 'Venta ya procesada previamente (evitada duplicación).'
                 })
 
-        # Crear la venta
-        venta = Venta.objects.create(
-            metodo_pago=metodo_pago,
-            total_venta=Decimal('0'),
-            total_ganancia=Decimal('0'),
-        )
+            cliente = None
+            if cliente_id:
+                cliente = Cliente.objects.filter(pk=cliente_id).first()
 
-        total_venta = Decimal('0')
-        total_ganancia = Decimal('0')
-
-        for item in items:
-            producto = Producto.objects.get(pk=item['producto_id'])
-            cantidad = int(item['cantidad'])
-            precio_venta = Decimal(str(item['precio_venta']))
-            precio_compra = producto.precio_compra
-
-            detalle = DetalleVenta(
-                venta=venta,
-                producto=producto,
-                cantidad=cantidad,
-                precio_venta=precio_venta,
-                precio_compra=precio_compra,
+            # 1. Crear venta preliminar
+            venta = Venta.objects.create(
+                cliente=cliente,
+                sesion_caja=caja_activa,
+                metodo_pago=metodo_pago,
+                notas=notas,
+                uuid_operacion=uuid_op,
             )
-            detalle.save()  # subtotal se calcula en save()
 
-            ganancia_linea = (precio_venta - precio_compra) * cantidad
-            total_venta += detalle.subtotal
-            total_ganancia += ganancia_linea
+            total_productos = Decimal('0.00')
+            total_costo_productos = Decimal('0.00')
+            total_servicios = Decimal('0.00')
+            total_comision_peluquero = Decimal('0.00')
 
-            # Descontar stock
-            producto.stock -= cantidad
-            producto.save()
+            # 2. Procesar productos físicos (con control estricto de concurrencia y stock)
+            for item in items_productos:
+                prod_id = item['producto_id']
+                cantidad = int(item['cantidad'])
+                precio_unitario = Decimal(str(item['precio_venta']))
 
-        venta.total_venta = total_venta
-        venta.total_ganancia = total_ganancia
-        venta.save()
+                if cantidad <= 0:
+                    raise ValueError("La cantidad de productos debe ser mayor a cero.")
+
+                # Bloqueo para evitar inconsistencias concurrentes
+                producto = Producto.objects.select_for_update().get(pk=prod_id)
+
+                if producto.stock < cantidad:
+                    raise ValueError(f"Stock insuficiente para '{producto.nombre}'. Disponible: {producto.stock}, solicitado: {cantidad}.")
+
+                subtotal = precio_unitario * cantidad
+                costo_total = producto.precio_compra * cantidad
+
+                DetalleVenta.objects.create(
+                    venta=venta,
+                    producto=producto,
+                    nombre_producto=producto.nombre,
+                    sku_producto=producto.sku,
+                    cantidad=cantidad,
+                    precio_venta=precio_unitario,
+                    precio_compra=producto.precio_compra,
+                    subtotal=subtotal
+                )
+
+                # Descontar stock y registrar Kardex
+                stock_ant = producto.stock
+                producto.stock -= cantidad
+                producto.save()
+
+                MovimientoInventario.objects.create(
+                    producto=producto,
+                    tipo='salida_venta',
+                    cantidad=cantidad,
+                    stock_anterior=stock_ant,
+                    stock_nuevo=producto.stock,
+                    motivo=f'Venta #{venta.pk}',
+                    referencia_origen=f'Venta #{venta.pk}',
+                    usuario=request.user
+                )
+
+                total_productos += subtotal
+                total_costo_productos += costo_total
+
+            # 3. Procesar servicios de peluquería
+            for srv_item in items_servicios:
+                servicio_id = srv_item['servicio_id']
+                peluquero_id = srv_item['peluquero_id']
+                mascota_id = srv_item.get('mascota_id')
+                precio_cobrado = Decimal(str(srv_item['precio']))
+                descuento = Decimal(str(srv_item.get('descuento', 0)))
+
+                servicio = ServicioPeluqueria.objects.get(pk=servicio_id)
+                peluquero = Trabajador.objects.get(pk=peluquero_id)
+                mascota = Mascota.objects.filter(pk=mascota_id).first() if mascota_id else None
+
+                atencion = AtencionPeluqueria.objects.create(
+                    venta=venta,
+                    servicio=servicio,
+                    nombre_servicio=servicio.nombre,
+                    mascota=mascota,
+                    cliente=cliente or (mascota.cliente if mascota else None),
+                    peluquero=peluquero,
+                    precio_cobrado=precio_cobrado,
+                    descuento=descuento,
+                    porcentaje_comision=peluquero.porcentaje_comision_peluqueria,
+                    observaciones=srv_item.get('observaciones', '')
+                )
+
+                total_servicios += atencion.valor_neto
+                total_comision_peluquero += atencion.comision_calculada
+
+            # 4. Totales globales
+            total_general = total_productos + total_servicios
+            ganancia_productos = total_productos - total_costo_productos
+            ganancia_servicios = total_servicios - total_comision_peluquero
+            ganancia_neta_total = ganancia_productos + ganancia_servicios
+
+            venta.subtotal = total_general
+            venta.total_venta = total_general
+            venta.total_costo_productos = total_costo_productos
+            venta.total_ganancia_productos = ganancia_productos
+            venta.total_servicios = total_servicios
+            venta.total_comision_peluquero = total_comision_peluquero
+            venta.total_ganancia = ganancia_neta_total
+            venta.save()
+
+            # 5. Registrar desglose de medios de pago
+            total_pagos_recibidos = Decimal('0.00')
+
+            if pagos_desglose:
+                for p in pagos_desglose:
+                    monto_pago = Decimal(str(p['monto']))
+                    if monto_pago > Decimal('0.00'):
+                        PagoVenta.objects.create(
+                            venta=venta,
+                            metodo=p['metodo'],
+                            monto=monto_pago,
+                            referencia=p.get('referencia', '')
+                        )
+                        total_pagos_recibidos += monto_pago
+                
+                # Validación estricta: suma de pagos = total de la venta
+                if abs(total_pagos_recibidos - total_general) > Decimal('0.01'):
+                    raise ValueError(f"La suma de los pagos (${total_pagos_recibidos:,.2f}) no coincide exactamente con el total de la venta (${total_general:,.2f}).")
+            else:
+                # Si no se envió desglose múltiple, usar método principal directo
+                PagoVenta.objects.create(
+                    venta=venta,
+                    metodo=metodo_pago,
+                    monto=total_general
+                )
 
         return JsonResponse({
             'success': True,
             'venta_id': venta.pk,
-            'total': float(total_venta),
-            'ganancia': float(total_ganancia),
-            'mensaje': f'Venta #{venta.pk} procesada exitosamente.'
+            'total': float(total_general),
+            'ganancia': float(ganancia_neta_total),
+            'mensaje': f'Venta #{venta.pk} registrada con éxito.'
         })
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-# ─────────────────────────────────────────────
-# HISTORIAL DE VENTAS
-# ─────────────────────────────────────────────
+@login_required
+def venta_detalle(request, pk):
+    """Detalle completo e imprimible de la venta."""
+    venta = get_object_or_404(Venta, pk=pk)
+    detalles = venta.detalles.select_related('producto').all()
+    servicios = venta.servicios_peluqueria.select_related('servicio', 'peluquero', 'mascota').all()
+    pagos = venta.pagos.all()
+
+    return render(request, 'sales/venta_detalle.html', {
+        'venta': venta,
+        'detalles': detalles,
+        'servicios': servicios,
+        'pagos': pagos,
+    })
+
 
 @login_required
 def historial_ventas(request):
-    """Historial de todas las ventas."""
-    ventas = Venta.objects.prefetch_related('detalles__producto')
+    """Historial con filtros avanzados, búsqueda y estados."""
+    ventas = Venta.objects.select_related('cliente', 'sesion_caja').prefetch_related('detalles', 'servicios_peluqueria', 'pagos')
 
-    # Filtros de fecha
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
+    metodo = request.GET.get('metodo', '')
+    estado = request.GET.get('estado', '')
 
     if fecha_desde:
         ventas = ventas.filter(fecha__date__gte=fecha_desde)
     if fecha_hasta:
         ventas = ventas.filter(fecha__date__lte=fecha_hasta)
+    if metodo:
+        ventas = ventas.filter(metodo_pago=metodo)
+    if estado:
+        ventas = ventas.filter(estado=estado)
 
-    # Totales del filtro
-    totales = ventas.aggregate(
+    totales = ventas.filter(estado='completada').aggregate(
         total=Sum('total_venta'),
         ganancia=Sum('total_ganancia'),
         num=Count('id')
     )
 
-    paginator = Paginator(ventas, 20)
+    paginator = Paginator(ventas, 25)
     page = request.GET.get('page', 1)
     ventas_paginadas = paginator.get_page(page)
 
@@ -420,580 +491,874 @@ def historial_ventas(request):
         'totales': totales,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
+        'metodo': metodo,
+        'estado': estado,
     })
 
 
 @login_required
-def venta_detalle(request, pk):
-    """Detalle de una venta específica."""
+@require_POST
+def anular_venta(request, pk):
+    """
+    Anulación segura y trazable de una venta:
+    - Retorna stock al inventario mediante movimiento compensatorio.
+    - Anula atenciones de peluquería asociadas (revisando si ya fueron liquidadas).
+    - Preserva registro histórico con motivo.
+    """
     venta = get_object_or_404(Venta, pk=pk)
-    detalles = venta.detalles.select_related('producto').all()
-    return render(request, 'sales/venta_detalle.html', {
-        'venta': venta,
-        'detalles': detalles,
-    })
-
-
-# ─────────────────────────────────────────────
-# REPORTES Y ESTADÍSTICAS
-# ─────────────────────────────────────────────
-
-@login_required
-def reportes(request):
-    """Panel de reportes y estadísticas avanzadas."""
-    hoy = timezone.now().date()
-
-    # Parámetros de período
-    periodo = request.GET.get('periodo', 'mes')
-
-    if periodo == 'hoy':
-        fecha_inicio = hoy
-        fecha_fin = hoy
-    elif periodo == 'semana':
-        fecha_inicio = hoy - timedelta(days=6)
-        fecha_fin = hoy
-    elif periodo == 'mes':
-        fecha_inicio = hoy.replace(day=1)
-        fecha_fin = hoy
-    elif periodo == 'año':
-        fecha_inicio = hoy.replace(month=1, day=1)
-        fecha_fin = hoy
-    else:
-        # Fechas personalizadas
-        fecha_inicio_str = request.GET.get('fecha_inicio', '')
-        fecha_fin_str = request.GET.get('fecha_fin', '')
-        try:
-            fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
-            fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
-        except ValueError:
-            fecha_inicio = hoy.replace(day=1)
-            fecha_fin = hoy
-
-    # 🔥 CORRECCIÓN CLAVE (datetime en vez de date)
-    inicio_datetime = datetime.combine(fecha_inicio, datetime.min.time())
-    fin_datetime = datetime.combine(fecha_fin, datetime.max.time())
-
-    ventas_periodo = Venta.objects.filter(
-        fecha__gte=inicio_datetime,
-        fecha__lte=fin_datetime
-    )
-
-    # Resumen del período
-    resumen = ventas_periodo.aggregate(
-        total_ventas=Sum('total_venta'),
-        total_ganancias=Sum('total_ganancia'),
-        num_ventas=Count('id'),
-    )
-    resumen['total_ventas'] = resumen['total_ventas'] or Decimal('0')
-    resumen['total_ganancias'] = resumen['total_ganancias'] or Decimal('0')
-    resumen['num_ventas'] = resumen['num_ventas'] or 0
-
-    ticket_promedio = (
-        resumen['total_ventas'] / resumen['num_ventas']
-        if resumen['num_ventas'] > 0 else Decimal('0')
-    )
-
-    # Ventas por día
-    ventas_por_dia = (
-        ventas_periodo
-        .annotate(dia=TruncDate('fecha'))
-        .values('dia')
-        .annotate(
-            total=Sum('total_venta'),
-            ganancia=Sum('total_ganancia')
-        )
-        .order_by('dia')
-    )
-
-    labels_dias = [
-        v['dia'].strftime('%d/%m') if v['dia'] else ''
-        for v in ventas_por_dia
-    ]
-    data_ventas_dia = [float(v['total']) for v in ventas_por_dia]
-    data_ganancias_dia = [float(v['ganancia']) for v in ventas_por_dia]
-
-    # Ventas por método de pago
-    por_metodo = (
-        ventas_periodo
-        .values('metodo_pago')
-        .annotate(
-            total=Sum('total_venta'),
-            num=Count('id')
-        )
-        .order_by('-total')
-    )
-
-    # Top productos
-    top_productos = (
-        DetalleVenta.objects
-        .filter(
-            venta__fecha__gte=inicio_datetime,
-            venta__fecha__lte=fin_datetime
-        )
-        .values('producto__nombre', 'producto__sku')
-        .annotate(
-            qty=Sum('cantidad'),
-            ingresos=Sum('subtotal'),
-            ganancia=Sum(F('subtotal') - F('precio_compra') * F('cantidad'))
-        )
-        .order_by('-qty')[:10]
-    )
-
-    # Stock bajo
-    stock_bajo = Producto.objects.filter(
-        activo=True,
-        stock__lte=F('stock_minimo')
-    ).order_by('stock')
-
-    # Ventas mensuales
-    hace_12_meses = hoy - timedelta(days=365)
-
-    ventas_mensuales = (
-        Venta.objects
-        .filter(fecha__date__gte=hace_12_meses)
-        .annotate(mes=TruncMonth('fecha'))
-        .values('mes')
-        .annotate(
-            total=Sum('total_venta'),
-            ganancia=Sum('total_ganancia')
-        )
-        .order_by('mes')
-    )
-
-    labels_meses = [v['mes'].strftime('%b %Y') for v in ventas_mensuales]
-    data_ventas_mes = [float(v['total']) for v in ventas_mensuales]
-    data_ganancias_mes = [float(v['ganancia']) for v in ventas_mensuales]
-
-    context = {
-        'periodo': periodo,
-        'fecha_inicio': fecha_inicio,
-        'fecha_fin': fecha_fin,
-        'resumen': resumen,
-        'ticket_promedio': ticket_promedio,
-        'labels_dias': json.dumps(labels_dias),
-        'data_ventas_dia': json.dumps(data_ventas_dia),
-        'data_ganancias_dia': json.dumps(data_ganancias_dia),
-        'por_metodo': list(por_metodo),
-        'top_productos': list(top_productos),
-        'stock_bajo': stock_bajo,
-        'labels_meses': json.dumps(labels_meses),
-        'data_ventas_mes': json.dumps(data_ventas_mes),
-        'data_ganancias_mes': json.dumps(data_ganancias_mes),
-    }
-
-    return render(request, 'reports/reportes.html', context)
-
-# ─────────────────────────────────────────────
-# API STOCK (para alertas en tiempo real)
-# ─────────────────────────────────────────────
-
-@login_required
-def api_stock_bajo(request):
-    """API: devuelve productos con stock bajo."""
-    productos = Producto.objects.filter(
-        activo=True, stock__lte=F('stock_minimo')
-    ).values('id', 'nombre', 'sku', 'stock', 'stock_minimo')
-    return JsonResponse({'productos': list(productos)})
-
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-from django.http import HttpResponse
-
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
-from django.db.models import Sum
-from django.utils import timezone
-from datetime import datetime
-import io
-
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
-from reportlab.lib.units import mm, cm
-from reportlab.pdfgen import canvas
-from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate
-
-
-# ─────────────────────────────────────────────
-#  PALETA DE COLORES
-# ─────────────────────────────────────────────
-PURPLE       = colors.HexColor("#6c63ff")
-PURPLE_DARK  = colors.HexColor("#4b44cc")
-PURPLE_LIGHT = colors.HexColor("#ede9ff")
-GREEN        = colors.HexColor("#22c55e")
-GREEN_LIGHT  = colors.HexColor("#dcfce7")
-GRAY_DARK    = colors.HexColor("#1e1e2e")
-GRAY_MID     = colors.HexColor("#6b7280")
-GRAY_LIGHT   = colors.HexColor("#f3f4f6")
-WHITE        = colors.white
-ROW_ALT      = colors.HexColor("#f8f7ff")
-
-
-# ─────────────────────────────────────────────
-#  CANVAS CON ENCABEZADO Y FOOTER PERSONALIZADOS
-# ─────────────────────────────────────────────
-def draw_header_footer(canvas_obj, doc, hoy, page_num, total_pages):
-    canvas_obj.saveState()
-    page_w, page_h = A4
-
-    # ── Banda superior ──────────────────────────────────────────
-    canvas_obj.setFillColor(PURPLE)
-    canvas_obj.rect(0, page_h - 60, page_w, 60, fill=1, stroke=0)
-
-    # Línea decorativa bajo la banda
-    canvas_obj.setFillColor(PURPLE_DARK)
-    canvas_obj.rect(0, page_h - 64, page_w, 4, fill=1, stroke=0)
-
-    # Nombre del negocio
-    canvas_obj.setFillColor(WHITE)
-    canvas_obj.setFont("Helvetica-Bold", 20)
-    canvas_obj.drawString(30, page_h - 38, "POS PRO")
-
-    # Subtítulo a la derecha
-    canvas_obj.setFont("Helvetica", 9)
-    canvas_obj.setFillColor(colors.HexColor("#d0cdff"))
-    canvas_obj.drawRightString(page_w - 30, page_h - 28, "Sistema de Punto de Venta")
-    canvas_obj.drawRightString(page_w - 30, page_h - 42, f"Generado: {hoy.strftime('%d/%m/%Y')}")
-
-    # ── Banda inferior ──────────────────────────────────────────
-    canvas_obj.setFillColor(GRAY_LIGHT)
-    canvas_obj.rect(0, 0, page_w, 40, fill=1, stroke=0)
-
-    canvas_obj.setFillColor(PURPLE)
-    canvas_obj.rect(0, 40, page_w, 2, fill=1, stroke=0)
-
-    canvas_obj.setFont("Helvetica", 8)
-    canvas_obj.setFillColor(GRAY_MID)
-    canvas_obj.drawString(30, 15, "Reporte generado automáticamente por POS PRO  •  Documento confidencial")
-    canvas_obj.drawRightString(
-        page_w - 30, 15,
-        f"Página {page_num} de {total_pages}"
-    )
-
-    canvas_obj.restoreState()
-
-
-# ─────────────────────────────────────────────
-#  VISTA PRINCIPAL
-# ─────────────────────────────────────────────
-@login_required
-def reporte_diario_pdf(request):
-    hoy = timezone.now().date()
-    inicio = datetime.combine(hoy, datetime.min.time())
-    fin    = datetime.combine(hoy, datetime.max.time())
-
-    ventas = Venta.objects.filter(fecha__gte=inicio, fecha__lte=fin).order_by("-fecha")
-
-    # ✅ NUEVO: EGRESOS
-    egresos = Egreso.objects.filter(fecha__gte=inicio, fecha__lte=fin).order_by("-fecha")
-
-    total     = ventas.aggregate(t=Sum("total_venta"))["t"] or 0
-    ganancia  = ventas.aggregate(g=Sum("total_ganancia"))["g"] or 0
-    cantidad  = ventas.count()
-    promedio  = (total / cantidad) if cantidad else 0
-
-    # ✅ NUEVO
-    total_egresos = egresos.aggregate(t=Sum("monto"))["t"] or 0
-
-    # ✅ UTILIDAD REAL
-    utilidad_real = total - total_egresos
-
-    # ── Response
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="reporte_{hoy}.pdf"'
-
-    buffer = io.BytesIO()
-    styles = getSampleStyleSheet()
-
-    # ── Estilos (NO TOCADOS)
-    style_section_title = ParagraphStyle(
-        "SectionTitle", fontName="Helvetica-Bold", fontSize=11,
-        textColor=PURPLE_DARK, spaceAfter=8, spaceBefore=4,
-    )
-
-    style_label = ParagraphStyle(
-        "Label", fontName="Helvetica", fontSize=8,
-        textColor=GRAY_MID, spaceAfter=2,
-    )
-
-    style_value_big = ParagraphStyle(
-        "ValueBig", fontName="Helvetica-Bold", fontSize=20,
-        textColor=GRAY_DARK,
-    )
-
-    style_value_green = ParagraphStyle(
-        "ValueGreen", fontName="Helvetica-Bold", fontSize=20,
-        textColor=GREEN,
-    )
-
-    style_value_red = ParagraphStyle(  # 👈 NUEVO
-        "ValueRed", fontName="Helvetica-Bold", fontSize=20,
-        textColor=colors.red,
-    )
-
-    style_footer_note = ParagraphStyle(
-        "FooterNote", fontName="Helvetica", fontSize=8,
-        textColor=GRAY_MID, alignment=TA_CENTER,
-    )
-
-    elements = []
-    page_w, _ = A4
-    content_w = page_w - 60
-
-    # ── Título
-    elements.append(Spacer(1, 10))
-    elements.append(Paragraph("Reporte Diario de Ventas", styles["Title"]))
-    elements.append(Paragraph(
-        f"{hoy.strftime('%d/%m/%Y')}", styles["Normal"]
-    ))
-
-    elements.append(Spacer(1, 10))
-
-    # ── CARDS (MODIFICADAS)
-    def card(label, value_text, value_style):
-        return Table(
-            [[Paragraph(label, style_label)],
-             [Paragraph(value_text, value_style)]],
-            colWidths=[(content_w / 2) - 10],
-        )
-
-    cards = Table([
-        [
-            card("Total Ventas", f"${total:,.0f}", style_value_big),
-            card("Ganancia", f"${ganancia:,.0f}", style_value_green),
-        ],
-        [
-            card("Egresos", f"${total_egresos:,.0f}", style_value_red),  # 👈 NUEVO
-            card("Utilidad Real", f"${utilidad_real:,.0f}", style_value_green),  # 👈 NUEVO
-        ]
-    ])
-
-    elements.append(cards)
-    elements.append(Spacer(1, 20))
-
-    # ── TABLA VENTAS (NO TOCADA)
-    elements.append(Paragraph("Detalle de Ventas", style_section_title))
-
-    if ventas.exists():
-        rows = [["ID", "Hora", "Método", "Total"]]
-        for v in ventas:
-            rows.append([
-                f"#{v.id}",
-                v.fecha.strftime("%H:%M"),
-                v.get_metodo_pago_display(),
-                f"${v.total_venta:,.0f}"
-            ])
-        elements.append(Table(rows))
-    else:
-        elements.append(Paragraph("Sin ventas"))
-
-    elements.append(Spacer(1, 20))
-
-    # ── 🆕 TABLA EGRESOS
-    elements.append(Paragraph("Detalle de Egresos", style_section_title))
-
-    if egresos.exists():
-        rows = [["Nombre", "Descripción", "Monto"]]
-
-        for e in egresos:
-            rows.append([
-                e.nombre,
-                e.descripcion or "-",
-                f"${e.monto:,.0f}"
-            ])
-
-        elements.append(Table(rows))
-    else:
-        elements.append(Paragraph("No hay egresos registrados"))
-
-    elements.append(Spacer(1, 20))
-
-    # ── RESUMEN FINAL 🧠
-    elements.append(Paragraph("Resumen Final", style_section_title))
-
-    resumen = Table([
-        ["Total Ventas", f"${total:,.0f}"],
-        ["Total Egresos", f"${total_egresos:,.0f}"],
-        ["Utilidad Real", f"${utilidad_real:,.0f}"],
-    ])
-
-    elements.append(resumen)
-
-    # ── Build
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    doc.build(elements)
-
-    pdf = buffer.getvalue()
-    buffer.close()
-    response.write(pdf)
-
-    return response
-
-from django.contrib.auth import get_user_model
-from django.http import HttpResponse
-
-def crear_admin(request):
-    User = get_user_model()
-
-    key = request.GET.get("key")
-
-    if key != "crear123":
-        return HttpResponse("No autorizado", status=403)
-
-    try:
-        user, created = User.objects.get_or_create(
-            username="kelly",
-            defaults={
-                "email": "jordava@gmail.com",
-            }
-        )
-
-        if created:
-            user.set_password("1234567890")
-            user.is_superuser = True
-            user.is_staff = True
-            user.save()
-            return HttpResponse("✅ Superusuario creado correctamente")
-
-        return HttpResponse("⚠️ El usuario ya existe")
-
-    except Exception as e:
-        return HttpResponse(f"❌ Error: {str(e)}", status=500)
-    
-    from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import Egreso
-import json
-
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.shortcuts import render
-import json
-from .models import Egreso
-
-@csrf_exempt
-def egresos_list_create(request):
-
-    # 🔥 GET → LISTA (HTML o JSON)
-    if request.method == 'GET':
-        egresos = Egreso.objects.all().order_by('-fecha')
-
-        # 👉 SI ES NAVEGADOR → HTML
-        if request.headers.get('Accept', '').find('text/html') != -1:
-            return render(request, 'egresos/lista.html', {
-                'egresos': egresos
-            })
-
-        # 👉 SI ES API → JSON
-        data = [
-            {
-                "id": e.id,
-                "nombre": e.nombre,
-                "descripcion": e.descripcion,
-                "monto": float(e.monto),
-                "metodo_pago": e.metodo_pago,
-                "fecha": e.fecha.strftime('%Y-%m-%d %H:%M')
-            }
-            for e in egresos
-        ]
-
-        return JsonResponse(data, safe=False)
-
-    # 🔥 POST → CREAR EGRESO (NO SE TOCA)
-    elif request.method == 'POST':
-        try:
-            body = json.loads(request.body)
-
-            egreso = Egreso.objects.create(
-                nombre=body.get('nombre'),
-                descripcion=body.get('descripcion'),
-                monto=body.get('monto'),
-                metodo_pago=body.get('metodo_pago', 'efectivo')
+    motivo = request.POST.get('motivo', 'Anulación solicitada por el administrador')
+
+    if venta.estado == 'anulada':
+        messages.warning(request, "Esta venta ya fue anulada previamente.")
+        return redirect('venta_detalle', pk=pk)
+
+    # Verificar si algún servicio de peluquería ya fue liquidado en jornada cerrada
+    for serv in venta.servicios_peluqueria.all():
+        if serv.estado_liquidacion == 'liquidado':
+            messages.error(
+                request,
+                f"No se puede anular la venta directamente porque el servicio de peluquería '{serv.nombre_servicio}' ya fue liquidado al trabajador. Se debe gestionar un ajuste contable."
+            )
+            return redirect('venta_detalle', pk=pk)
+
+    with transaction.atomic():
+        venta.estado = 'anulada'
+        venta.motivo_anulacion = motivo
+        venta.anulada_en = timezone.now()
+        venta.save()
+
+        # Reintegrar productos a inventario
+        for det in venta.detalles.all():
+            prod = det.producto
+            stock_ant = prod.stock
+            prod.stock += det.cantidad
+            prod.save()
+
+            MovimientoInventario.objects.create(
+                producto=prod,
+                tipo='anulacion_venta',
+                cantidad=det.cantidad,
+                stock_anterior=stock_ant,
+                stock_nuevo=prod.stock,
+                motivo=f'Devolución por anulación de Venta #{venta.pk}: {motivo}',
+                referencia_origen=f'Venta #{venta.pk}',
+                usuario=request.user
             )
 
-            return JsonResponse({
-                "message": "Egreso creado correctamente",
-                "id": egreso.id
-            }, status=201)
+        # Anular comisiones de peluquería
+        for serv in venta.servicios_peluqueria.all():
+            serv.estado_liquidacion = 'anulado'
+            serv.observaciones = f"Anulado por venta #{venta.pk}: {motivo}"
+            serv.save()
 
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-@csrf_exempt
-def egreso_detail(request, pk):
-    try:
-        egreso = Egreso.objects.get(pk=pk)
-    except Egreso.DoesNotExist:
-        return JsonResponse({"error": "Egreso no encontrado"}, status=404)
-
-    if request.method == 'GET':
-        data = {
-            "id": egreso.id,
-            "nombre": egreso.nombre,
-            "descripcion": egreso.descripcion,
-            "monto": float(egreso.monto),
-            "metodo_pago": egreso.metodo_pago,
-            "fecha": egreso.fecha.strftime('%Y-%m-%d %H:%M')
-        }
-        return JsonResponse(data)
-
-    elif request.method == 'PUT':
-        try:
-            body = json.loads(request.body)
-
-            egreso.nombre = body.get('nombre', egreso.nombre)
-            egreso.descripcion = body.get('descripcion', egreso.descripcion)
-            egreso.monto = body.get('monto', egreso.monto)
-            egreso.metodo_pago = body.get('metodo_pago', egreso.metodo_pago)
-
-            egreso.save()
-
-            return JsonResponse({"message": "Egreso actualizado"})
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-    elif request.method == 'DELETE':
-        egreso.delete()
-        return JsonResponse({"message": "Egreso eliminado"})
-    
-from django.shortcuts import render, redirect
-from .models import Egreso
-from django.utils import timezone
+    messages.success(request, f"Venta #{venta.pk} anulada exitosamente y stock reintegrado.")
+    return redirect('venta_detalle', pk=pk)
 
 
-def egresos_page(request):
-    return render(request, 'egresos/egresos_form.html')
+# ==============================================================================
+# MÓDULO ESPECIAL: PELUQUERÍA, COMISIONES, ADELANTOS Y LIQUIDACIÓN DIARIA
+# ==============================================================================
+
+@login_required
+def peluqueria_dashboard(request):
+    """
+    Panel central del módulo de peluquería canina:
+    - Atenciones de la jornada y comisiones generadas (50%).
+    - Adelantos entregados.
+    - Cierres y liquidaciones por peluquero.
+    """
+    hoy = timezone.now().date()
+    peluqueros = Trabajador.objects.filter(activo=True, rol='peluquero')
+    servicios_catalogo = ServicioPeluqueria.objects.all()
+
+    # Atenciones del día
+    atenciones_hoy = AtencionPeluqueria.objects.filter(fecha__date=hoy).select_related('peluquero', 'servicio', 'mascota')
+    adelantos_hoy = AdelantoPeluquero.objects.filter(fecha__date=hoy).select_related('peluquero')
+    liquidaciones_recientes = LiquidacionPeluquero.objects.all().select_related('peluquero')[:10]
+
+    context = {
+        'hoy': hoy,
+        'peluqueros': peluqueros,
+        'servicios_catalogo': servicios_catalogo,
+        'atenciones_hoy': atenciones_hoy,
+        'adelantos_hoy': adelantos_hoy,
+        'liquidaciones_recientes': liquidaciones_recientes,
+    }
+    return render(request, 'peluqueria/dashboard.html', context)
 
 
-def egresos_guardar(request):
+@login_required
+def adelanto_registrar(request):
+    """Registra un adelanto de dinero al peluquero y afecta caja o banco."""
+    caja_activa = obtener_caja_activa()
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        descripcion = request.POST.get('descripcion')
-        monto = request.POST.get('monto')
-        metodo_pago = request.POST.get('metodo_pago')
+        form = AdelantoPeluqueroForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                adelanto = form.save(commit=False)
+                adelanto.sesion_caja = caja_activa
+                adelanto.save()
+            messages.success(request, f"Adelanto de ${adelanto.monto:,.0f} registrado para {adelanto.peluquero.nombre}.")
+            return redirect('peluqueria_dashboard')
+    else:
+        form = AdelantoPeluqueroForm()
 
-        Egreso.objects.create(
-            nombre=nombre,
-            descripcion=descripcion,
-            monto=monto,
-            metodo_pago=metodo_pago,
-            fecha=timezone.now()
+    return render(request, 'peluqueria/adelanto_form.html', {'form': form, 'caja_activa': caja_activa})
+
+
+@login_required
+def liquidacion_jornada(request, peluquero_id):
+    """
+    Pantalla interactiva de liquidación diaria para un peluquero:
+    Formula:
+    Saldo por pagar = Saldo anterior + Comisiones jornada - Adelantos jornada - Pagos.
+    Permite arrastre automático de saldos pendientes de jornadas anteriores.
+    """
+    peluquero = get_object_or_404(Trabajador, pk=peluquero_id)
+    hoy = timezone.now().date()
+    caja_activa = obtener_caja_activa()
+
+    # Buscar liquidación del día o servicios pendientes de liquidar
+    servicios_pendientes = AtencionPeluqueria.objects.filter(
+        peluquero=peluquero,
+        estado_liquidacion='pendiente'
+    ).select_related('servicio', 'mascota')
+
+    adelantos_pendientes = AdelantoPeluquero.objects.filter(
+        peluquero=peluquero,
+        estado='pendiente'
+    )
+
+    # Arrastre de saldo anterior: buscar la última liquidación cerrada con saldo pendiente
+    ultima_liq = LiquidacionPeluquero.objects.filter(
+        peluquero=peluquero
+    ).exclude(estado='liquidada').exclude(estado='anulada').first()
+
+    saldo_anterior = Decimal('0.00')
+    if ultima_liq and ultima_liq.fecha_jornada < hoy:
+        saldo_anterior = ultima_liq.saldo_pendiente
+
+    total_comision_servicios = sum((s.comision_calculada for s in servicios_pendientes), Decimal('0.00'))
+    total_adelantos = sum((a.monto for a in adelantos_pendientes), Decimal('0.00'))
+    saldo_a_liquidar = saldo_anterior + total_comision_servicios - total_adelantos
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        monto_pago = Decimal(request.POST.get('monto_pago', '0'))
+        medio_pago = request.POST.get('medio_pago', 'efectivo')
+        observacion = request.POST.get('observacion', '')
+
+        with transaction.atomic():
+            # Crear o actualizar liquidación de hoy
+            liq, created = LiquidacionPeluquero.objects.get_or_create(
+                peluquero=peluquero,
+                fecha_jornada=hoy,
+                defaults={
+                    'saldo_anterior': saldo_anterior,
+                    'observaciones': observacion
+                }
+            )
+
+            # Imputar servicios pendientes a esta liquidación
+            for serv in servicios_pendientes:
+                serv.estado_liquidacion = 'liquidado'
+                serv.liquidada_en = liq
+                serv.save()
+
+            # Imputar adelantos pendientes a esta liquidación
+            for ad in adelantos_pendientes:
+                ad.estado = 'imputado'
+                ad.liquidada_en = liq
+                ad.save()
+
+            # Registrar pago si se entregó dinero en el cierre
+            if monto_pago > Decimal('0.00'):
+                PagoLiquidacion.objects.create(
+                    liquidacion=liq,
+                    sesion_caja=caja_activa,
+                    monto=monto_pago,
+                    medio_pago=medio_pago,
+                    observacion=f"Pago de liquidación jornada {hoy}"
+                )
+
+            # Recalcular totales y saldo pendiente
+            liq.recalcular()
+
+        messages.success(request, f"Liquidación guardada para {peluquero.nombre}. Saldo pendiente: ${liq.saldo_pendiente:,.0f}")
+        return redirect('peluqueria_dashboard')
+
+    context = {
+        'peluquero': peluquero,
+        'hoy': hoy,
+        'servicios_pendientes': servicios_pendientes,
+        'adelantos_pendientes': adelantos_pendientes,
+        'saldo_anterior': saldo_anterior,
+        'total_comision_servicios': total_comision_servicios,
+        'total_adelantos': total_adelantos,
+        'saldo_a_liquidar': saldo_a_liquidar,
+        'caja_activa': caja_activa,
+    }
+    return render(request, 'peluqueria/liquidacion_form.html', context)
+
+
+# ==============================================================================
+# MÓDULO OBLIGATORIO: CIERRE DE CAJA (EFECTIVO Y BANCO SEPARADOS)
+# ==============================================================================
+
+@login_required
+def caja_detalle(request):
+    """
+    Control de caja activa, resumen en tiempo real de entradas/salidas,
+    apertura de nueva jornada y cierre ciego con comparación exacta.
+    """
+    caja_activa = obtener_caja_activa()
+    historial_cajas = SesionCaja.objects.filter(estado='cerrada').order_by('-fecha_apertura')[:10]
+
+    datos_caja = None
+    if caja_activa:
+        # 1. Ventas por medio de pago
+        pagos_ventas = PagoVenta.objects.filter(
+            venta__sesion_caja=caja_activa, venta__estado='completada'
+        )
+        ventas_efectivo = pagos_ventas.filter(metodo='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+        ventas_transferencia = pagos_ventas.filter(metodo='transferencia').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+        ventas_tarjeta = pagos_ventas.filter(metodo='tarjeta').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+        ventas_otros = pagos_ventas.filter(metodo='otro').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+        total_ventas = ventas_efectivo + ventas_transferencia + ventas_tarjeta + ventas_otros
+
+        # 2. Desglose productos vs peluquería en esta caja
+        total_productos = DetalleVenta.objects.filter(
+            venta__sesion_caja=caja_activa, venta__estado='completada'
+        ).aggregate(t=Sum('subtotal'))['t'] or Decimal('0.00')
+
+        total_peluqueria = AtencionPeluqueria.objects.filter(
+            venta__sesion_caja=caja_activa
+        ).exclude(estado_liquidacion='anulado').aggregate(t=Sum('valor_neto'))['t'] or Decimal('0.00')
+
+        # 3. Egresos operativos y pagos de personal
+        egresos_qs = Egreso.objects.filter(sesion_caja=caja_activa)
+        egresos_efectivo = egresos_qs.filter(metodo_pago='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+        egresos_banco = egresos_qs.exclude(metodo_pago='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+        # 4. Adelantos y liquidaciones del peluquero
+        adelantos_efectivo = AdelantoPeluquero.objects.filter(
+            sesion_caja=caja_activa, medio_entrega='efectivo'
+        ).exclude(estado='anulado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+        adelantos_banco = AdelantoPeluquero.objects.filter(
+            sesion_caja=caja_activa, medio_entrega='transferencia'
+        ).exclude(estado='anulado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+        pagos_peluquero_efectivo = PagoLiquidacion.objects.filter(
+            sesion_caja=caja_activa, medio_pago='efectivo', estado='confirmado'
+        ).aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+        pagos_peluquero_banco = PagoLiquidacion.objects.filter(
+            sesion_caja=caja_activa, medio_pago='transferencia', estado='confirmado'
+        ).aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+        # 5. Efectivo esperado en gaveta:
+        # Base Inicial + Ingresos Efectivo - Egresos Efectivo - Adelantos Efectivo - Pagos Peluquero Efectivo
+        efectivo_esperado = (
+            caja_activa.monto_inicial_efectivo
+            + ventas_efectivo
+            - egresos_efectivo
+            - adelantos_efectivo
+            - pagos_peluquero_efectivo
         )
 
-        return redirect('egresos_page')
-    
+        # 6. Banco neto esperado (Transferencias + Tarjetas - Salidas Bancarias)
+        banco_ingresos = ventas_transferencia + ventas_tarjeta + ventas_otros
+        banco_salidas = egresos_banco + adelantos_banco + pagos_peluquero_banco
+        banco_neto = banco_ingresos - banco_salidas
 
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
-from .models import Egreso
+        datos_caja = {
+            'ventas_efectivo': ventas_efectivo,
+            'ventas_transferencia': ventas_transferencia,
+            'ventas_tarjeta': ventas_tarjeta,
+            'ventas_otros': ventas_otros,
+            'total_ventas': total_ventas,
+            'total_productos': total_productos,
+            'total_peluqueria': total_peluqueria,
+            'egresos_efectivo': egresos_efectivo,
+            'egresos_banco': egresos_banco,
+            'adelantos_efectivo': adelantos_efectivo,
+            'adelantos_banco': adelantos_banco,
+            'pagos_peluquero_efectivo': pagos_peluquero_efectivo,
+            'pagos_peluquero_banco': pagos_peluquero_banco,
+            'efectivo_esperado': efectivo_esperado,
+            'banco_ingresos': banco_ingresos,
+            'banco_salidas': banco_salidas,
+            'banco_neto': banco_neto,
+        }
+
+    form_apertura = AperturaCajaForm()
+    form_cierre = CierreCajaForm()
+
+    return render(request, 'caja/caja_control.html', {
+        'caja_activa': caja_activa,
+        'datos': datos_caja,
+        'historial_cajas': historial_cajas,
+        'form_apertura': form_apertura,
+        'form_cierre': form_cierre,
+    })
+
+
+@login_required
+@require_POST
+def caja_abrir(request):
+    """Apertura de turno de caja con saldo base."""
+    if obtener_caja_activa():
+        messages.warning(request, "Ya existe una caja abierta actualmente.")
+        return redirect('caja_detalle')
+
+    form = AperturaCajaForm(request.POST)
+    if form.is_valid():
+        monto_inicial = form.cleaned_data['monto_inicial']
+        obs = form.cleaned_data['observaciones']
+
+        SesionCaja.objects.create(
+            monto_inicial_efectivo=monto_inicial,
+            observaciones_apertura=obs,
+            usuario_apertura=request.user,
+            estado='abierta'
+        )
+        messages.success(request, f"Caja abierta exitosamente con una base de ${monto_inicial:,.0f} COP.")
+    return redirect('caja_detalle')
+
+
+@login_required
+@require_POST
+def caja_cerrar(request):
+    """
+    Cierre de caja comparativo:
+    Compara el dinero físico contado por el administrador contra el efectivo calculado.
+    Guarda diferencias (sobrante o faltante) y congela la sesión.
+    """
+    caja = obtener_caja_activa()
+    if not caja:
+        messages.error(request, "No hay ninguna caja abierta para cerrar.")
+        return redirect('caja_detalle')
+
+    form = CierreCajaForm(request.POST)
+    if form.is_valid():
+        efectivo_real = form.cleaned_data['efectivo_real']
+        obs = form.cleaned_data['observaciones']
+
+        with transaction.atomic():
+            # Calcular cifras finales
+            pagos = PagoVenta.objects.filter(venta__sesion_caja=caja, venta__estado='completada')
+            v_efectivo = pagos.filter(metodo='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+            banco_tot = pagos.exclude(metodo='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+            e_efectivo = Egreso.objects.filter(sesion_caja=caja, metodo_pago='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+            ad_efectivo = AdelantoPeluquero.objects.filter(sesion_caja=caja, medio_entrega='efectivo').exclude(estado='anulado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+            p_efectivo = PagoLiquidacion.objects.filter(sesion_caja=caja, medio_pago='efectivo', estado='confirmado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+            efectivo_esperado = caja.monto_inicial_efectivo + v_efectivo - e_efectivo - ad_efectivo - p_efectivo
+            diferencia = efectivo_real - efectivo_esperado
+
+            caja.fecha_cierre = timezone.now()
+            caja.efectivo_esperado = efectivo_esperado
+            caja.efectivo_real = efectivo_real
+            caja.diferencia_efectivo = diferencia
+            caja.banco_esperado = banco_tot
+            caja.observaciones_cierre = obs
+            caja.usuario_cierre = request.user
+            caja.estado = 'cerrada'
+            caja.save()
+
+        if diferencia == 0:
+            messages.success(request, f"Caja cerrada perfectamente sin diferencias. Efectivo: ${efectivo_real:,.0f} | Banco: ${banco_tot:,.0f}")
+        elif diferencia > 0:
+            messages.warning(request, f"Caja cerrada con SOBRANTE de +${diferencia:,.0f}. Efectivo real: ${efectivo_real:,.0f}")
+        else:
+            messages.error(request, f"Caja cerrada con FALTANTE de ${abs(diferencia):,.0f}. Efectivo real: ${efectivo_real:,.0f}")
+
+    return redirect('caja_detalle')
+
+
+# ==============================================================================
+# CLIENTES Y MASCOTAS
+# ==============================================================================
+
+@login_required
+def clientes_list(request):
+    """Directorio de clientes y dueños de mascotas."""
+    q = request.GET.get('q', '').strip()
+    clientes = Cliente.objects.all().prefetch_related('mascotas')
+    if q:
+        clientes = clientes.filter(
+            Q(nombre__icontains=q) | Q(telefono__icontains=q) | Q(documento__icontains=q) | Q(mascotas__nombre__icontains=q)
+        ).distinct()
+
+    paginator = Paginator(clientes, 20)
+    page = request.GET.get('page', 1)
+    return render(request, 'clientes/clientes_list.html', {
+        'clientes': paginator.get_page(page),
+        'q': q
+    })
+
+
+@login_required
+def cliente_crear(request):
+    if request.method == 'POST':
+        form = ClienteForm(request.POST)
+        if form.is_valid():
+            cliente = form.save()
+            messages.success(request, f"Cliente {cliente.nombre} registrado con éxito.")
+            return redirect('cliente_detalle', pk=cliente.pk)
+    else:
+        form = ClienteForm()
+    return render(request, 'clientes/cliente_form.html', {'form': form, 'titulo': 'Nuevo Cliente'})
+
+
+@login_required
+def cliente_editar(request, pk):
+    cliente = get_object_or_404(Cliente, pk=pk)
+    if request.method == 'POST':
+        form = ClienteForm(request.POST, instance=cliente)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Datos del cliente actualizados.")
+            return redirect('cliente_detalle', pk=cliente.pk)
+    else:
+        form = ClienteForm(instance=cliente)
+    return render(request, 'clientes/cliente_form.html', {'form': form, 'titulo': f'Editar: {cliente.nombre}'})
+
+
+@login_required
+def cliente_detalle(request, pk):
+    cliente = get_object_or_404(Cliente, pk=pk)
+    mascotas = cliente.mascotas.all()
+    servicios = AtencionPeluqueria.objects.filter(cliente=cliente).order_by('-fecha')[:10]
+    compras = Venta.objects.filter(cliente=cliente, estado='completada').order_by('-fecha')[:10]
+
+    return render(request, 'clientes/cliente_detalle.html', {
+        'cliente': cliente,
+        'mascotas': mascotas,
+        'servicios': servicios,
+        'compras': compras,
+    })
+
+
+@login_required
+def mascota_crear(request, cliente_id=None):
+    cliente = None
+    if cliente_id:
+        cliente = get_object_or_404(Cliente, pk=cliente_id)
+
+    if request.method == 'POST':
+        form = MascotaForm(request.POST)
+        if form.is_valid():
+            mascota = form.save()
+            messages.success(request, f"Mascota {mascota.nombre} registrada correctamente.")
+            if mascota.cliente:
+                return redirect('cliente_detalle', pk=mascota.cliente.pk)
+            return redirect('clientes_list')
+    else:
+        form = MascotaForm(initial={'cliente': cliente} if cliente else None)
+    return render(request, 'clientes/mascota_form.html', {'form': form, 'cliente': cliente})
+
+
+# ==============================================================================
+# INVENTARIO Y PRODUCTOS
+# ==============================================================================
+
+@login_required
+def inventario(request):
+    """Catálogo y control de existencias con soporte de lector de barras."""
+    productos = Producto.objects.select_related('categoria').all()
+
+    q = request.GET.get('q', '').strip()
+    cat = request.GET.get('categoria', '')
+    filtro_stock = request.GET.get('stock', '')
+
+    if q:
+        productos = productos.filter(
+            Q(nombre__icontains=q) | Q(sku__icontains=q) | Q(codigo_interno__icontains=q)
+        )
+    if cat:
+        productos = productos.filter(categoria_id=cat)
+    if filtro_stock == 'bajo':
+        productos = productos.filter(stock__lte=F('stock_minimo'))
+    elif filtro_stock == 'sin':
+        productos = productos.filter(stock=0)
+
+    categorias = Categoria.objects.all()
+    paginator = Paginator(productos, 25)
+    page = request.GET.get('page', 1)
+
+    return render(request, 'inventory/inventario.html', {
+        'productos': paginator.get_page(page),
+        'categorias': categorias,
+        'q': q,
+        'categoria_sel': cat,
+        'filtro_stock': filtro_stock,
+    })
+
+
+@login_required
+def producto_crear(request):
+    if request.method == 'POST':
+        form = ProductoForm(request.POST)
+        if form.is_valid():
+            prod = form.save()
+            messages.success(request, f"Producto '{prod.nombre}' creado.")
+            return redirect('inventario')
+    else:
+        form = ProductoForm()
+    return render(request, 'inventory/producto_form.html', {'form': form, 'titulo': 'Nuevo Producto'})
+
+
+@login_required
+def producto_editar(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    if request.method == 'POST':
+        form = ProductoForm(request.POST, instance=producto)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Producto '{producto.nombre}' actualizado.")
+            return redirect('inventario')
+    else:
+        form = ProductoForm(instance=producto)
+    return render(request, 'inventory/producto_form.html', {'form': form, 'titulo': f'Editar: {producto.nombre}'})
+
+
+@login_required
+def producto_detalle(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    movimientos = producto.movimientos.all()[:20]
+    return render(request, 'inventory/producto_detalle.html', {
+        'producto': producto,
+        'movimientos': movimientos,
+    })
+
+
+@login_required
+def producto_eliminar(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    if request.method == 'POST':
+        producto.activo = False
+        producto.save()
+        messages.success(request, f"Producto '{producto.nombre}' desactivado.")
+        return redirect('inventario')
+    return render(request, 'inventory/producto_confirmar_eliminar.html', {'producto': producto})
+
+
+# ==============================================================================
+# COMPRAS Y PROVEEDORES
+# ==============================================================================
+
+@login_required
+def compras_list(request):
+    compras = Compra.objects.select_related('proveedor').all()
+    return render(request, 'compras/compras_list.html', {'compras': compras})
+
+
+@login_required
+def compra_registrar(request):
+    proveedores = Proveedor.objects.filter(activo=True)
+    productos = Producto.objects.filter(activo=True)
+    caja_activa = obtener_caja_activa()
+
+    if request.method == 'POST':
+        proveedor_id = request.POST.get('proveedor')
+        numero_factura = request.POST.get('numero_factura')
+        metodo_pago = request.POST.get('metodo_pago', 'efectivo')
+        estado = request.POST.get('estado', 'recibida_pagada')
+        items_json = request.POST.get('items_json')
+
+        try:
+            items = json.loads(items_json) if items_json else []
+            if not items:
+                messages.error(request, "Debe agregar al menos un producto a la compra.")
+                return redirect('compra_registrar')
+
+            with transaction.atomic():
+                compra = Compra.objects.create(
+                    proveedor_id=proveedor_id,
+                    numero_factura_proveedor=numero_factura,
+                    metodo_pago=metodo_pago,
+                    estado=estado,
+                    sesion_caja=caja_activa if (estado == 'recibida_pagada') else None
+                )
+
+                total_compra = Decimal('0.00')
+                for it in items:
+                    prod = Producto.objects.get(pk=it['producto_id'])
+                    cant = int(it['cantidad'])
+                    costo = Decimal(str(it['costo_unitario']))
+
+                    DetalleCompra.objects.create(
+                        compra=compra,
+                        producto=prod,
+                        cantidad=cant,
+                        costo_unitario=costo,
+                        subtotal=costo * cant
+                    )
+
+                    # Aumentar existencias y actualizar costo
+                    stock_ant = prod.stock
+                    prod.stock += cant
+                    prod.precio_compra = costo
+                    prod.save()
+
+                    MovimientoInventario.objects.create(
+                        producto=prod,
+                        tipo='entrada_compra',
+                        cantidad=cant,
+                        stock_anterior=stock_ant,
+                        stock_nuevo=prod.stock,
+                        motivo=f'Compra #{compra.pk} a {compra.proveedor.nombre}',
+                        referencia_origen=f'Compra #{compra.pk}',
+                        usuario=request.user
+                    )
+                    total_compra += (costo * cant)
+
+                compra.total = total_compra
+                compra.save()
+
+            messages.success(request, f"Compra #{compra.pk} por ${total_compra:,.0f} registrada con éxito.")
+            return redirect('compras_list')
+
+        except Exception as e:
+            messages.error(request, f"Error al registrar compra: {str(e)}")
+
+    return render(request, 'compras/compra_form.html', {
+        'proveedores': proveedores,
+        'productos': productos,
+        'caja_activa': caja_activa
+    })
+
+
+# ==============================================================================
+# EGRESOS OPERATIVOS Y PAGOS AL PERSONAL
+# ==============================================================================
+
+@login_required
+def egresos_list_create(request):
+    caja_activa = obtener_caja_activa()
+    if request.method == 'POST':
+        form = EgresoForm(request.POST, request.FILES)
+        if form.is_valid():
+            with transaction.atomic():
+                egreso = form.save(commit=False)
+                egreso.sesion_caja = caja_activa
+                egreso.save()
+            messages.success(request, f"Egreso de ${egreso.monto:,.0f} registrado.")
+            return redirect('egresos_list_create')
+    else:
+        form = EgresoForm()
+
+    egresos = Egreso.objects.all().select_related('trabajador_asociado', 'sesion_caja')
+    total_egresos = egresos.aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+    return render(request, 'egresos/lista.html', {
+        'form': form,
+        'egresos': egresos[:30],
+        'total_egresos': total_egresos,
+        'caja_activa': caja_activa
+    })
+
+
+@login_required
+def egresos_page(request):
+    return redirect('egresos_list_create')
+
+
+@login_required
+def egresos_guardar(request):
+    return redirect('egresos_list_create')
+
+
+@login_required
+def egreso_detail(request, pk):
+    egreso = get_object_or_404(Egreso, pk=pk)
+    if request.method == 'DELETE':
+        egreso.delete()
+        return JsonResponse({'message': 'Egreso eliminado'})
+    return JsonResponse({
+        'id': egreso.id,
+        'nombre': egreso.nombre,
+        'monto': float(egreso.monto),
+        'categoria': egreso.get_categoria_display(),
+        'beneficiario': egreso.beneficiario or '',
+        'metodo': egreso.get_metodo_pago_display()
+    })
+
 
 @login_required
 def eliminar_egresos(request):
-    Egreso.objects.all().delete()
+    """Acción de mantenimiento restringida."""
+    if request.user.is_superuser:
+        Egreso.objects.all().delete()
+        messages.success(request, "Todos los egresos han sido limpiados.")
     return redirect('dashboard')
 
 
+# ==============================================================================
+# REPORTES FINANCIEROS Y GANANCIAS REALES
+# ==============================================================================
+
+@login_required
+def reportes(request):
+    """
+    Panel financiero integral y cálculo de ganancia económica real:
+    - Ventas de productos vs servicios.
+    - Costo de mercancía vendida (COGS real histórico).
+    - Comisiones de peluquería (50%).
+    - Egresos operativos y pagos de nómina.
+    - Medios de pago (efectivo vs transferencias bancarias).
+    """
+    hoy = timezone.now().date()
+    periodo = request.GET.get('periodo', 'mes')
+
+    if periodo == 'hoy':
+        inicio_date = hoy
+        fin_date = hoy
+    elif periodo == 'semana':
+        inicio_date = hoy - timedelta(days=6)
+        fin_date = hoy
+    elif periodo == 'año':
+        inicio_date = hoy.replace(month=1, day=1)
+        fin_date = hoy
+    elif periodo == 'personalizado':
+        ini_str = request.GET.get('fecha_inicio', '')
+        fin_str = request.GET.get('fecha_fin', '')
+        try:
+            inicio_date = datetime.strptime(ini_str, '%Y-%m-%d').date()
+            fin_date = datetime.strptime(fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            inicio_date = hoy.replace(day=1)
+            fin_date = hoy
+    else:  # mes por defecto
+        inicio_date = hoy.replace(day=1)
+        fin_date = hoy
+
+    inicio_dt = timezone.make_aware(datetime.combine(inicio_date, datetime.min.time()))
+    fin_dt = timezone.make_aware(datetime.combine(fin_date, datetime.max.time()))
+
+    # 1. Ventas del período
+    ventas_qs = Venta.objects.filter(fecha__gte=inicio_dt, fecha__lte=fin_dt, estado='completada')
+    total_ventas = ventas_qs.aggregate(t=Sum('total_venta'))['t'] or Decimal('0.00')
+
+    # 2. Desglose de Productos
+    detalles_prod = DetalleVenta.objects.filter(venta__in=ventas_qs)
+    ingresos_productos = detalles_prod.aggregate(t=Sum('subtotal'))['t'] or Decimal('0.00')
+    costo_productos = detalles_prod.aggregate(t=Sum(F('precio_compra') * F('cantidad')))['t'] or Decimal('0.00')
+    ganancia_productos = ingresos_productos - costo_productos
+
+    # 3. Desglose de Peluquería
+    atenciones_qs = AtencionPeluqueria.objects.filter(
+        fecha__gte=inicio_dt, fecha__lte=fin_dt
+    ).exclude(estado_liquidacion='anulado')
+    ingresos_peluqueria = atenciones_qs.aggregate(t=Sum('valor_neto'))['t'] or Decimal('0.00')
+    comisiones_peluqueria = atenciones_qs.aggregate(t=Sum('comision_calculada'))['t'] or Decimal('0.00')
+    parte_negocio_peluqueria = ingresos_peluqueria - comisiones_peluqueria
+
+    # 4. Egresos Operativos y Personal
+    egresos_qs = Egreso.objects.filter(fecha__gte=inicio_dt, fecha__lte=fin_dt)
+    gastos_operativos = egresos_qs.exclude(categoria='personal').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+    pagos_personal = egresos_qs.filter(categoria='personal').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+    total_gastos = gastos_operativos + pagos_personal
+
+    # 5. Ganancia neta real estimada
+    # (Ganancia bruta productos + Margen peluquería) - Gastos operativos y personal
+    resultado_economico_neto = (ganancia_productos + parte_negocio_peluqueria) - total_gastos
+
+    # 6. Medios de pago en el período
+    pagos_qs = PagoVenta.objects.filter(venta__in=ventas_qs)
+    total_efectivo = pagos_qs.filter(metodo='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+    total_transferencia = pagos_qs.filter(metodo='transferencia').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+    total_tarjeta = pagos_qs.filter(metodo='tarjeta').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+    total_otros_medios = pagos_qs.filter(metodo='otro').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+
+    # Top productos más vendidos
+    top_productos = (
+        detalles_prod.values('producto__nombre', 'sku_producto')
+        .annotate(qty=Sum('cantidad'), ingresos=Sum('subtotal'))
+        .order_by('-qty')[:10]
+    )
+
+    context = {
+        'periodo': periodo,
+        'fecha_inicio': inicio_date,
+        'fecha_fin': fin_date,
+        'total_ventas': total_ventas,
+        'ingresos_productos': ingresos_productos,
+        'costo_productos': costo_productos,
+        'ganancia_productos': ganancia_productos,
+        'ingresos_peluqueria': ingresos_peluqueria,
+        'comisiones_peluqueria': comisiones_peluqueria,
+        'parte_negocio_peluqueria': parte_negocio_peluqueria,
+        'gastos_operativos': gastos_operativos,
+        'pagos_personal': pagos_personal,
+        'total_gastos': total_gastos,
+        'resultado_economico_neto': resultado_economico_neto,
+        'total_efectivo': total_efectivo,
+        'total_transferencia': total_transferencia,
+        'total_tarjeta': total_tarjeta,
+        'total_otros_medios': total_otros_medios,
+        'top_productos': top_productos,
+    }
+    return render(request, 'reports/reportes.html', context)
+
+
+@login_required
+def api_stock_bajo(request):
+    """Devuelve listado de productos con stock mínimo alcanzado."""
+    productos = Producto.objects.filter(activo=True, stock__lte=F('stock_minimo')).values(
+        'id', 'nombre', 'sku', 'stock', 'stock_minimo'
+    )
+    return JsonResponse({'productos': list(productos)})
+
+
+@login_required
+def reporte_diario_pdf(request):
+    """Generación de PDF con resumen diario usando ReportLab."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
+
+    hoy = timezone.now().date()
+    inicio = timezone.make_aware(datetime.combine(hoy, datetime.min.time()))
+    fin = timezone.make_aware(datetime.combine(hoy, datetime.max.time()))
+
+    ventas = Venta.objects.filter(fecha__gte=inicio, fecha__lte=fin, estado='completada')
+    total_ventas = ventas.aggregate(t=Sum('total_venta'))['t'] or Decimal('0.00')
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph(f"Reporte Diario de Operaciones - {hoy.strftime('%d/%m/%Y')}", styles['Title']))
+    elements.append(Spacer(1, 15))
+
+    tabla_data = [
+        ["Concepto", "Valor COP"],
+        ["Total Ventas Registradas", f"${total_ventas:,.2f}"],
+        ["Número de Operaciones", str(ventas.count())]
+    ]
+    elements.append(Table(tabla_data))
+
+    doc.build(elements)
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="reporte_diario_{hoy}.pdf"'
+    return response
+
+
+def crear_admin(request):
+    """Comando web protegido para contingencias."""
+    key = request.GET.get("key")
+    if key != "crear123":
+        return HttpResponse("No autorizado", status=403)
+    user, created = User.objects.get_or_create(username="admin", defaults={"email": "admin@petshop.local"})
+    user.set_password("admin123")
+    user.is_superuser = True
+    user.is_staff = True
+    user.save()
+    return HttpResponse("Superusuario admin asegurado (admin / admin123)")

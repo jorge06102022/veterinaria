@@ -1,123 +1,139 @@
 """
-Management command: python manage.py cargar_datos_prueba
-Carga datos iniciales de prueba en la base de datos.
+cargar_datos_prueba.py - Generador de datos iniciales completos para Pet Shop y Peluquería Canina
 """
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from decimal import Decimal
 import random
 from datetime import timedelta
 
-from pos_app.models import Categoria, Producto, Venta, DetalleVenta
+from pos_app.models import (
+    Categoria, Producto, Cliente, Mascota, Trabajador,
+    ServicioPeluqueria, Proveedor, Compra, DetalleCompra,
+    Venta, DetalleVenta, AtencionPeluqueria, PagoVenta,
+    AdelantoPeluquero, LiquidacionPeluquero, Egreso, SesionCaja
+)
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Carga datos de prueba iniciales para el sistema POS'
+    help = 'Carga datos de prueba realistas para Peluquería de Mascotas y Pet Shop'
 
     def handle(self, *args, **options):
-        self.stdout.write('Cargando datos de prueba...')
+        self.stdout.write('Iniciando carga de datos de prueba para Pet Shop y Peluquería...')
 
-        # Crear superusuario si no existe
-        if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser('admin', 'admin@pos.com', 'admin123')
-            self.stdout.write(self.style.SUCCESS('✓ Superusuario creado: admin / admin123'))
+        # 1. Superusuario Administrador
+        admin_user, _ = User.objects.get_or_create(username='admin', defaults={'email': 'admin@petpos.com'})
+        admin_user.set_password('admin123')
+        admin_user.is_superuser = True
+        admin_user.is_staff = True
+        admin_user.save()
+        self.stdout.write(self.style.SUCCESS('[OK] Superusuario verificado: admin / admin123'))
 
-        # Categorías
-        categorias_data = [
-            ('Bebidas', 'Refrescos, jugos y agua'),
-            ('Snacks', 'Papas, galletas y dulces'),
-            ('Lácteos', 'Leche, queso y yogurt'),
-            ('Panadería', 'Pan y productos de panadería'),
-            ('Limpieza', 'Productos de limpieza del hogar'),
-            ('Electrónica', 'Accesorios electrónicos'),
+        # 2. Categorías de Tienda de Mascotas
+        cats_data = [
+            ('Alimento Perros', 'Concentrado, galletas y snacks caninos'),
+            ('Alimento Gatos', 'Concentrado, paté y snacks felinos'),
+            ('Accesorios & Juguetes', 'Collares, correas, pelotas y rascadores'),
+            ('Farmacia & Cuidado', 'Antipulgas, champús medicados y vitaminas'),
+            ('Higiene & Arena', 'Arena para gatos, toallas húmedas y pañales'),
         ]
         categorias = {}
-        for nombre, desc in categorias_data:
-            cat, _ = Categoria.objects.get_or_create(nombre=nombre, defaults={'descripcion': desc})
-            categorias[nombre] = cat
-        self.stdout.write(self.style.SUCCESS(f'✓ {len(categorias)} categorías creadas'))
+        for nom, desc in cats_data:
+            c, _ = Categoria.objects.get_or_create(nombre=nom, defaults={'descripcion': desc})
+            categorias[nom] = c
+        self.stdout.write(self.style.SUCCESS(f'[OK] {len(categorias)} categorias creadas'))
 
-        # Productos
-        productos_data = [
-            ('Coca-Cola 350ml', 'BEB-001', 'Bebidas', 1200, 2000, 50),
-            ('Pepsi 350ml', 'BEB-002', 'Bebidas', 1100, 1800, 40),
-            ('Agua Cristal 600ml', 'BEB-003', 'Bebidas', 500, 1000, 80),
-            ('Jugo Hit Mango', 'BEB-004', 'Bebidas', 900, 1500, 35),
-            ('Papas Margarita', 'SNK-001', 'Snacks', 1500, 2500, 60),
-            ('Chitos', 'SNK-002', 'Snacks', 800, 1500, 45),
-            ('Galletas Oreo', 'SNK-003', 'Snacks', 2000, 3200, 30),
-            ('Chocolatina Jet', 'SNK-004', 'Snacks', 600, 1000, 100),
-            ('Leche Alquería 1L', 'LAC-001', 'Lácteos', 2800, 3800, 25),
-            ('Yogurt Alpina 200g', 'LAC-002', 'Lácteos', 1800, 2800, 20),
-            ('Pan Tajado Bimbo', 'PAN-001', 'Panadería', 4500, 6500, 15),
-            ('Mogolla', 'PAN-002', 'Panadería', 200, 500, 50),
-            ('Jabón Protex', 'LIM-001', 'Limpieza', 2500, 4000, 30),
-            ('Detergente Ariel 500g', 'LIM-002', 'Limpieza', 5500, 8000, 20),
-            ('Audífonos Genéricos', 'ELE-001', 'Electrónica', 8000, 15000, 10),
-            ('Cable USB-C', 'ELE-002', 'Electrónica', 3000, 8000, 15),
-            ('Pilas AA x2', 'ELE-003', 'Electrónica', 2000, 4500, 40),
-            ('Fósforos', 'LIM-003', 'Limpieza', 300, 700, 3),  # stock bajo para demo
-            ('Mentas Halls', 'SNK-005', 'Snacks', 400, 800, 80),
-            ('Red Bull 250ml', 'BEB-005', 'Bebidas', 3500, 6000, 25),
+        # 3. Catálogo de Productos con códigos de barras realistas
+        prods_data = [
+            ('Dog Chow Adultos 2kg', '770123456001', 'Alimento Perros', 22000, 32000, 35),
+            ('Pro Plan Adulto Razas Medianas 3kg', '770123456002', 'Alimento Perros', 55000, 78000, 20),
+            ('Snack Galletas CanAmor 200g', '770123456003', 'Alimento Perros', 4500, 7500, 45),
+            ('Whiskas Pescado 1.5kg', '770123456004', 'Alimento Gatos', 18000, 26000, 30),
+            ('Cat Chow Gatitos 1kg', '770123456005', 'Alimento Gatos', 14000, 21000, 25),
+            ('Shampoo Canino Coco & Avena 500ml', '770123456006', 'Farmacia & Cuidado', 12000, 22000, 28),
+            ('Pipeta Antipulgas Fipronil Perro Mediano', '770123456007', 'Farmacia & Cuidado', 15000, 28000, 40),
+            ('Arena Sanitaria Aglomerante 5kg', '770123456008', 'Higiene & Arena', 16000, 25000, 50),
+            ('Collar Ajustable Reflectivo Talla M', '770123456009', 'Accesorios & Juguetes', 8000, 16000, 18),
+            ('Pelota Mordedora con Cuerda', '770123456010', 'Accesorios & Juguetes', 5000, 11000, 22),
+            ('Cepillo Deslanador Furflex', '770123456011', 'Accesorios & Juguetes', 14000, 29000, 4), # stock bajo
         ]
-
-        for nombre, sku, cat_nombre, p_compra, p_venta, stock in productos_data:
-            Producto.objects.get_or_create(
+        productos = []
+        for nom, sku, cat_nom, pc, pv, st in prods_data:
+            p, _ = Producto.objects.get_or_create(
                 sku=sku,
                 defaults={
-                    'nombre': nombre,
-                    'categoria': categorias[cat_nombre],
-                    'precio_compra': Decimal(str(p_compra)),
-                    'precio_venta': Decimal(str(p_venta)),
-                    'stock': stock,
+                    'nombre': nom,
+                    'categoria': categorias[cat_nom],
+                    'precio_compra': Decimal(str(pc)),
+                    'precio_venta': Decimal(str(pv)),
+                    'stock': st,
                     'stock_minimo': 5,
+                    'unidad_medida': 'und',
                 }
             )
-        self.stdout.write(self.style.SUCCESS(f'✓ {len(productos_data)} productos creados'))
+            productos.append(p)
+        self.stdout.write(self.style.SUCCESS(f'[OK] {len(productos)} productos creados'))
 
-        # Ventas de prueba (últimos 30 días)
-        productos_list = list(Producto.objects.filter(activo=True))
-        ventas_creadas = 0
+        # 4. Servicios de Peluquería
+        servs_data = [
+            ('Baño Básico & Secado', 'Baño, cepillado y corte de uñas', 28000),
+            ('Peluquería Canina Completa', 'Baño, corte de raza, uñas y limpieza de oídos', 45000),
+            ('Corte Higiénico & Deslanado', 'Despeje de zonas íntimas y retiro de pelo muerto', 32000),
+            ('Baño Medicado Dermatológico', 'Champú antialérgico o antipulgas con masaje', 38000),
+            ('Grooming Completo Razas Grandes', 'Baño y corte especial para Golden/Husky/Labrador', 65000),
+        ]
+        servicios = []
+        for nom, desc, ps in servs_data:
+            s, _ = ServicioPeluqueria.objects.get_or_create(nombre=nom, defaults={'descripcion': desc, 'precio_sugerido': Decimal(str(ps))})
+            servicios.append(s)
+        self.stdout.write(self.style.SUCCESS(f'[OK] {len(servicios)} servicios de peluqueria configurados'))
 
-        for days_ago in range(30, 0, -1):
-            num_ventas_dia = random.randint(3, 12)
-            for _ in range(num_ventas_dia):
-                fecha = timezone.now() - timedelta(days=days_ago) + timedelta(
-                    hours=random.randint(8, 21),
-                    minutes=random.randint(0, 59)
-                )
-                metodo = random.choice(['efectivo', 'efectivo', 'efectivo', 'tarjeta', 'transferencia'])
+        # 5. Personal / Peluqueros y Trabajadores
+        peluquero_carlos, _ = Trabajador.objects.get_or_create(
+            nombre='Carlos Rodríguez',
+            defaults={'rol': 'peluquero', 'telefono': '3124567890', 'porcentaje_comision_peluqueria': Decimal('50.00')}
+        )
+        peluquera_maria, _ = Trabajador.objects.get_or_create(
+            nombre='María Fernández',
+            defaults={'rol': 'peluquero', 'telefono': '3157891234', 'porcentaje_comision_peluqueria': Decimal('50.00')}
+        )
+        ayudante_juan, _ = Trabajador.objects.get_or_create(
+            nombre='Juan Pérez',
+            defaults={'rol': 'apoyo', 'telefono': '3001234567', 'porcentaje_comision_peluqueria': Decimal('0.00')}
+        )
+        self.stdout.write(self.style.SUCCESS('[OK] Trabajadores y peluqueros registrados (comision 50%)'))
 
-                venta = Venta.objects.create(
-                    fecha=fecha,
-                    metodo_pago=metodo,
-                    total_venta=Decimal('0'),
-                    total_ganancia=Decimal('0'),
-                )
+        # 6. Clientes y Mascotas
+        clientes_data = [
+            ('Andrés Morales', '3005551122', 'Max', 'perro', 'Golden Retriever', 'grande'),
+            ('Carolina Vega', '3114443322', 'Luna', 'perro', 'Poodle Mini', 'pequeno'),
+            ('Santiago Gómez', '3209998877', 'Milo', 'gato', 'Siamés', 'pequeno'),
+            ('Valeria Ortiz', '3156667788', 'Toby', 'perro', 'Schnauzer', 'mediano'),
+        ]
+        for c_nom, tel, m_nom, esp, raza, tam in clientes_data:
+            c, _ = Cliente.objects.get_or_create(nombre=c_nom, defaults={'telefono': tel})
+            Mascota.objects.get_or_create(cliente=c, nombre=m_nom, defaults={'especie': esp, 'raza': raza, 'tamano': tam})
+        self.stdout.write(self.style.SUCCESS('[OK] Clientes y mascotas creados'))
 
-                productos_venta = random.sample(productos_list, random.randint(1, 4))
-                total = Decimal('0')
-                ganancia = Decimal('0')
+        # 7. Proveedores
+        prov, _ = Proveedor.objects.get_or_create(
+            nombre='Distribuidora Pet Colombia SAS',
+            defaults={'contacto': 'Jorge Vendedor', 'telefono': '3188889900', 'nit': '900123456-1'}
+        )
+        self.stdout.write(self.style.SUCCESS('[OK] Proveedor verificado'))
 
-                for prod in productos_venta:
-                    cantidad = random.randint(1, 3)
-                    detalle = DetalleVenta(
-                        venta=venta,
-                        producto=prod,
-                        cantidad=cantidad,
-                        precio_venta=prod.precio_venta,
-                        precio_compra=prod.precio_compra,
-                    )
-                    detalle.save()
-                    total += detalle.subtotal
-                    ganancia += (prod.precio_venta - prod.precio_compra) * cantidad
+        # 8. Sesión de Caja Activa para pruebas
+        caja_activa = SesionCaja.objects.filter(estado='abierta').first()
+        if not caja_activa:
+            caja_activa = SesionCaja.objects.create(
+                monto_inicial_efectivo=Decimal('100000.00'),
+                usuario_apertura=admin_user,
+                estado='abierta',
+                observaciones_apertura='Caja base de demostracion $100.000 COP'
+            )
+            self.stdout.write(self.style.SUCCESS('[OK] Sesion de caja abierta creada con base $100.000 COP'))
 
-                venta.total_venta = total
-                venta.total_ganancia = ganancia
-                venta.save()
-                ventas_creadas += 1
-
-        self.stdout.write(self.style.SUCCESS(f'✓ {ventas_creadas} ventas de prueba generadas'))
-        self.stdout.write(self.style.SUCCESS('\n✅ Datos de prueba cargados exitosamente.'))
-        self.stdout.write('   Usuario: admin | Contraseña: admin123')
+        self.stdout.write(self.style.SUCCESS('\n[OK] Datos iniciales cargados con exito para Pet Shop y Peluqueria Canina.'))

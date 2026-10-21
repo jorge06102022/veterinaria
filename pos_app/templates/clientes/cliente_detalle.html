@@ -1,0 +1,105 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ cliente.nombre }} — PetPOS Pro{% endblock %}
+{% block page_title %}Perfil de Cliente: {{ cliente.nombre }}{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Información del Propietario -->
+    <div class="col-md-4">
+        <div class="card-pos p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-white mb-0">{{ cliente.nombre }}</h5>
+                <a href="{% url 'cliente_editar' cliente.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+            </div>
+            <ul class="list-group list-group-flush bg-transparent">
+                <li class="list-group-item bg-transparent text-light px-0">
+                    <small class="text-secondary d-block">Teléfono:</small>
+                    <a href="https://wa.me/{{ cliente.telefono }}" target="_blank" class="text-success text-decoration-none fw-bold">
+                        <i class="bi bi-whatsapp me-1"></i>{{ cliente.telefono }}
+                    </a>
+                </li>
+                <li class="list-group-item bg-transparent text-light px-0">
+                    <small class="text-secondary d-block">Cédula / Documento:</small>
+                    <span>{{ cliente.documento|default:"No registrado" }}</span>
+                </li>
+                <li class="list-group-item bg-transparent text-light px-0">
+                    <small class="text-secondary d-block">Dirección:</small>
+                    <span>{{ cliente.direccion|default:"No registrada" }}</span>
+                </li>
+                <li class="list-group-item bg-transparent text-light px-0">
+                    <small class="text-secondary d-block">Notas:</small>
+                    <span class="small">{{ cliente.observaciones|default:"Sin notas adicionales." }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Mascotas del Cliente -->
+    <div class="col-md-8">
+        <div class="card-pos h-100">
+            <div class="card-pos-header">
+                <span><i class="bi bi-tag-fill me-2 text-info"></i>Mascotas Registradas</span>
+                <a href="{% url 'cliente_mascota_crear' cliente.pk %}" class="btn btn-accent btn-sm"><i class="bi bi-plus-lg me-1"></i> Agregar Mascota</a>
+            </div>
+            <div class="card-pos-body p-3">
+                <div class="row g-3">
+                    {% for m in mascotas %}
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: var(--bg-app); border: 1px solid var(--border);">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="fw-bold text-white mb-0"><i class="bi bi-heart-pulse text-danger me-1"></i>{{ m.nombre }}</h6>
+                                <span class="badge-pos badge-info">{{ m.get_tamano_display }}</span>
+                            </div>
+                            <div class="small text-secondary mb-1">Especie/Raza: <strong>{{ m.get_especie_display }} - {{ m.raza|default:"Mestizo" }}</strong></div>
+                            <div class="small text-secondary mb-2">Edad: {{ m.edad_aproximada|default:"No indicada" }}</div>
+                            {% if m.observaciones_peluqueria %}
+                            <div class="p-2 rounded small text-warning" style="background: rgba(245, 158, 11, 0.1);">
+                                <i class="bi bi-scissors me-1"></i>{{ m.observaciones_peluqueria }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center text-muted py-4">No hay mascotas registradas para este propietario.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historial de Servicios de Peluquería -->
+<div class="card-pos mb-4">
+    <div class="card-pos-header">
+        <span><i class="bi bi-clock-history me-2"></i>Historial de Atenciones de Peluquería</span>
+    </div>
+    <div class="card-pos-body p-0">
+        <table class="table table-pos mb-0">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Mascota</th>
+                    <th>Servicio</th>
+                    <th>Peluquero</th>
+                    <th class="text-end">Valor Cobrado</th>
+                    <th>Notas</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in servicios %}
+                <tr>
+                    <td>{{ s.fecha|date:"d/m/Y H:i" }}</td>
+                    <td class="fw-bold">{{ s.mascota.nombre|default:"General" }}</td>
+                    <td>{{ s.nombre_servicio }}</td>
+                    <td>{{ s.peluquero.nombre }}</td>
+                    <td class="text-end fw-bold text-success">${{ s.valor_neto|floatformat:0 }}</td>
+                    <td class="small text-secondary">{{ s.observaciones|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-3">No hay atenciones de peluquería previas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base/base.html' %}
+{% block title %}Clientes y Mascotas — PetPOS Pro{% endblock %}
+{% block page_title %}Directorio de Clientes & Sus Mascotas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <form class="d-flex gap-2" style="max-width: 450px; width: 100%;">
+        <input type="text" name="q" class="form-control" placeholder="Buscar por cliente, teléfono o nombre de mascota..." value="{{ q }}">
+        <button type="submit" class="btn btn-outline-pos"><i class="bi bi-search"></i></button>
+    </form>
+    <div class="d-flex gap-2">
+        <a href="{% url 'mascota_crear' %}" class="btn btn-outline-info"><i class="bi bi-plus-lg me-1"></i> Nueva Mascota</a>
+        <a href="{% url 'cliente_crear' %}" class="btn btn-accent"><i class="bi bi-person-plus-fill me-1"></i> Nuevo Cliente</a>
+    </div>
+</div>
+
+<div class="card-pos">
+    <div class="card-pos-header">
+        <span><i class="bi bi-person-hearts me-2 text-info"></i>Listado de Clientes Registrados</span>
+    </div>
+    <div class="card-pos-body p-0">
+        <table class="table table-pos mb-0">
+            <thead>
+                <tr>
+                    <th>Cliente / Propietario</th>
+                    <th>Teléfono / WhatsApp</th>
+                    <th>Documento</th>
+                    <th>Mascotas Asociadas</th>
+                    <th>Fecha Registro</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in clientes %}
+                <tr>
+                    <td>
+                        <a href="{% url 'cliente_detalle' c.pk %}" class="fw-bold text-white text-decoration-none">
+                            {{ c.nombre }}
+                        </a>
+                    </td>
+                    <td><i class="bi bi-whatsapp text-success me-1"></i>{{ c.telefono }}</td>
+                    <td>{{ c.documento|default:"-" }}</td>
+                    <td>
+                        {% for m in c.mascotas.all %}
+                        <span class="badge-pos badge-info me-1"><i class="bi bi-tag me-1"></i>{{ m.nombre }} ({{ m.raza|default:m.especie }})</span>
+                        {% empty %}
+                        <span class="text-muted small">Sin mascotas registradas</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ c.fecha_registro|date:"d/m/Y" }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'cliente_mascota_crear' c.pk %}" class="btn btn-sm btn-outline-info py-0" title="Agregar Mascota"><i class="bi bi-plus-circle"></i> Mascota</a>
+                        <a href="{% url 'cliente_editar' c.pk %}" class="btn btn-sm btn-outline-secondary py-0 ms-1"><i class="bi bi-pencil"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No se encontraron clientes.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

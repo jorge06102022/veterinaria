@@ -380,10 +380,10 @@
 <!-- Sidebar -->
 <aside class="sidebar">
     <div class="sidebar-brand">
-        <div class="brand-icon"></div>
+        <div class="brand-icon"><i class="bi bi-heart-pulse-fill text-white"></i></div>
         <div>
-            <div class="brand-name">NexSales</div>
-            <div class="brand-sub">Sistema de Ventas</div>
+            <div class="brand-name">PetPOS Pro</div>
+            <div class="brand-sub">Peluquería & Pet Shop</div>
         </div>
     </div>
 
@@ -393,31 +393,45 @@
             <i class="bi bi-grid-3x3-gap-fill"></i> Dashboard
         </a>
 
-        <div class="nav-section-title">Ventas</div>
+        <div class="nav-section-title">Ventas & Caja</div>
         <a href="{% url 'pos' %}" class="nav-link {% if request.resolver_match.url_name == 'pos' %}active{% endif %}">
             <i class="bi bi-cart4"></i> Punto de Venta
         </a>
-        <a href="{% url 'historial_ventas' %}" class="nav-link {% if request.resolver_match.url_name == 'historial_ventas' %}active{% endif %}">
+        <a href="{% url 'historial_ventas' %}" class="nav-link {% if request.resolver_match.url_name == 'historial_ventas' or request.resolver_match.url_name == 'venta_detalle' %}active{% endif %}">
             <i class="bi bi-receipt-cutoff"></i> Historial Ventas
         </a>
+        <a href="{% url 'caja_detalle' %}" class="nav-link {% if request.resolver_match.url_name == 'caja_detalle' %}active{% endif %}">
+            <i class="bi bi-safe2-fill"></i> Control de Caja
+        </a>
 
-        <div class="nav-section-title">Inventario</div>
-        <a href="{% url 'inventario' %}" class="nav-link {% if request.resolver_match.url_name == 'inventario' %}active{% endif %}">
-            <i class="bi bi-boxes"></i> Inventario
+        <div class="nav-section-title">Peluquería Canina</div>
+        <a href="{% url 'peluqueria_dashboard' %}" class="nav-link {% if 'peluqueria' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-scissors"></i> Peluquería & Liquidación
+        </a>
+
+        <div class="nav-section-title">Clientes & Mascotas</div>
+        <a href="{% url 'clientes_list' %}" class="nav-link {% if 'cliente' in request.resolver_match.url_name or 'mascota' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-person-hearts"></i> Clientes & Mascotas
+        </a>
+
+        <div class="nav-section-title">Inventario & Tienda</div>
+        <a href="{% url 'inventario' %}" class="nav-link {% if request.resolver_match.url_name == 'inventario' or request.resolver_match.url_name == 'producto_detalle' %}active{% endif %}">
+            <i class="bi bi-boxes"></i> Inventario Productos
         </a>
         <a href="{% url 'producto_crear' %}" class="nav-link {% if request.resolver_match.url_name == 'producto_crear' %}active{% endif %}">
             <i class="bi bi-plus-square"></i> Nuevo Producto
         </a>
-
-        <div class="nav-section-title">Análisis</div>
-        <a href="{% url 'reportes' %}" class="nav-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
-            <i class="bi bi-bar-chart-fill"></i> Reportes
+        <a href="{% url 'compras_list' %}" class="nav-link {% if 'compra' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-truck"></i> Compras Proveedores
         </a>
-        <div class="nav-section-title">Finanzas</div>
 
-<a href="{% url 'egresos_list_create' %}" class="btn-accent">
-    <i class="bi bi-cash-coin me-1"></i> Egresos
-</a>  
+        <div class="nav-section-title">Finanzas & Reportes</div>
+        <a href="{% url 'egresos_list_create' %}" class="nav-link {% if 'egreso' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-cash-coin"></i> Egresos & Nómina
+        </a>
+        <a href="{% url 'reportes' %}" class="nav-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
+            <i class="bi bi-graph-up-arrow"></i> Reportes Financieros
+        </a>
     </nav>
 
     <div class="sidebar-footer">

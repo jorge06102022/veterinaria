@@ -1,0 +1,125 @@
+{% extends 'base/base.html' %}
+{% block title %}Liquidación de Jornada — {{ peluquero.nombre }}{% endblock %}
+{% block page_title %}Liquidación de Peluquero: {{ peluquero.nombre }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Resumen de Liquidación y Fórmula Financiera -->
+    <div class="col-md-5">
+        <div class="card-pos p-4 border-info">
+            <h5 class="fw-bold text-white mb-3"><i class="bi bi-calculator-fill me-2 text-info"></i>Cálculo de Cierre Diario</h5>
+            <div class="p-3 rounded mb-4" style="background: var(--bg-app); border: 1px solid var(--border);">
+                <table class="table table-sm table-borderless text-light mb-0">
+                    <tr>
+                        <td>(+) Saldo Anterior Pendiente:</td>
+                        <td class="text-end fw-bold text-secondary">${{ saldo_anterior|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td>(+) Comisiones de la Jornada (50%):</td>
+                        <td class="text-end fw-bold text-warning">+${{ total_comision_servicios|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td>(−) Adelantos ya entregados:</td>
+                        <td class="text-end fw-bold text-danger">-${{ total_adelantos|floatformat:0 }}</td>
+                    </tr>
+                    <tr class="border-top" style="border-color: var(--border) !important;">
+                        <td class="fs-5 fw-bold text-white pt-2">(=) SALDO POR LIQUIDAR:</td>
+                        <td class="text-end fs-4 fw-bold text-warning pt-2">${{ saldo_a_liquidar|floatformat:0 }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Formulario de Pago y Cierre -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Monto a Pagar en este momento ($):</label>
+                    <input type="number" name="monto_pago" class="form-control form-control-lg text-success fw-bold" value="{{ saldo_a_liquidar|floatformat:0 }}" min="0" step="500">
+                    <small class="text-muted">Si no se paga la totalidad, el saldo restante se traslada automáticamente a la siguiente jornada.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Medio de Pago:</label>
+                    <select name="medio_pago" class="form-select">
+                        <option value="efectivo">Efectivo de Caja</option>
+                        <option value="transferencia">Transferencia Bancaria</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Observaciones:</label>
+                    <textarea name="observacion" class="form-control" rows="2" placeholder="Notas sobre el cierre o pago"></textarea>
+                </div>
+                <button type="submit" class="btn btn-accent w-100 py-3 fw-bold fs-5">
+                    <i class="bi bi-check2-circle me-1"></i> GUARDAR LIQUIDACIÓN
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Servicios y Adelantos Imputados -->
+    <div class="col-md-7">
+        <!-- Servicios de Peluquería Pendientes -->
+        <div class="card-pos mb-4">
+            <div class="card-pos-header">
+                <span><i class="bi bi-scissors me-2 text-info"></i>Servicios Pendientes por Liquidar ({{ servicios_pendientes|length }})</span>
+            </div>
+            <div class="card-pos-body p-0">
+                <table class="table table-pos mb-0">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Servicio</th>
+                            <th>Mascota</th>
+                            <th class="text-end">Cobrado</th>
+                            <th class="text-end text-warning">Comisión (50%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in servicios_pendientes %}
+                        <tr>
+                            <td>{{ s.fecha|date:"H:i" }}</td>
+                            <td class="fw-bold">{{ s.nombre_servicio }}</td>
+                            <td>{{ s.mascota.nombre|default:"Ocasional" }}</td>
+                            <td class="text-end">${{ s.valor_neto|floatformat:0 }}</td>
+                            <td class="text-end fw-bold text-warning">${{ s.comision_calculada|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-3">No hay servicios pendientes de liquidar.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Adelantos Imputados -->
+        <div class="card-pos">
+            <div class="card-pos-header">
+                <span><i class="bi bi-cash-coin me-2 text-danger"></i>Adelantos a Descontar en esta Liquidación ({{ adelantos_pendientes|length }})</span>
+            </div>
+            <div class="card-pos-body p-0">
+                <table class="table table-pos mb-0">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Motivo</th>
+                            <th>Medio</th>
+                            <th class="text-end">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in adelantos_pendientes %}
+                        <tr>
+                            <td>{{ a.fecha|date:"H:i" }}</td>
+                            <td>{{ a.motivo|default:"Adelanto a cuenta" }}</td>
+                            <td>{{ a.get_medio_entrega_display }}</td>
+                            <td class="text-end fw-bold text-danger">-${{ a.monto|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No hay adelantos pendientes por descontar.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

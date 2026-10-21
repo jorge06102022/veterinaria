@@ -1,0 +1,52 @@
+{% extends 'base/base.html' %}
+{% block title %}Registrar Mascota — PetPOS Pro{% endblock %}
+{% block page_title %}Registrar Mascota{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card-pos p-4 border-info">
+            <h5 class="fw-bold text-white mb-3"><i class="bi bi-tag me-2 text-info"></i>Ficha de la Mascota</h5>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Propietario Asociado:</label>
+                    {{ form.cliente }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Nombre de la Mascota:</label>
+                    {{ form.nombre }}
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small text-secondary">Especie:</label>
+                        {{ form.especie }}
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small text-secondary">Tamaño:</label>
+                        {{ form.tamano }}
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small text-secondary">Raza:</label>
+                        {{ form.raza }}
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small text-secondary">Edad Aprox:</label>
+                        {{ form.edad_aproximada }}
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label small text-secondary">Notas para Peluquería / Temperamento:</label>
+                    {{ form.observaciones_peluqueria }}
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'clientes_list' %}" class="btn btn-outline-secondary w-50">Cancelar</a>
+                    <button type="submit" class="btn btn-accent w-50">Guardar Mascota</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'base/base.html' %}
+{% block title %}Registrar Adelanto — PetPOS Pro{% endblock %}
+{% block page_title %}Entregar Adelanto a Peluquero{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card-pos p-4 border-warning">
+            <h5 class="fw-bold text-white mb-3"><i class="bi bi-cash-stack me-2 text-warning"></i>Adelanto de Comisiones</h5>
+            <p class="small text-secondary mb-3">
+                Un adelanto reduce directamente el saldo a liquidar del trabajador al final de la jornada y descuenta la salida de dinero de la caja física o banco una sola vez.
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Peluquero Beneficiario:</label>
+                    {{ form.peluquero }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Monto del Adelanto ($ COP):</label>
+                    {{ form.monto }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-secondary">Medio de Entrega:</label>
+                    {{ form.medio_entrega }}
+                </div>
+                <div class="mb-4">
+                    <label class="form-label small text-secondary">Motivo / Concepto:</label>
+                    {{ form.motivo }}
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'peluqueria_dashboard' %}" class="btn btn-outline-secondary w-50">Cancelar</a>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold w-50">
+                        <i class="bi bi-check-lg me-1"></i> Confirmar Adelanto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

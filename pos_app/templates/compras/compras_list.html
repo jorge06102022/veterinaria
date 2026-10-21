@@ -1,0 +1,53 @@
+{% extends 'base/base.html' %}
+{% block title %}Compras y Proveedores — PetPOS Pro{% endblock %}
+{% block page_title %}Compras de Inventario a Proveedores{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold text-white mb-0">Entradas por Compra</h5>
+        <small class="text-secondary">Las compras confirmadas ingresan stock automáticamente y actualizan el costo unitario.</small>
+    </div>
+    <a href="{% url 'compra_registrar' %}" class="btn btn-accent"><i class="bi bi-cart-plus me-1"></i> Registrar Compra</a>
+</div>
+
+<div class="card-pos">
+    <div class="card-pos-header">
+        <span><i class="bi bi-truck me-2 text-info"></i>Historial de Compras</span>
+    </div>
+    <div class="card-pos-body p-0">
+        <table class="table table-pos mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Proveedor</th>
+                    <th>N° Factura</th>
+                    <th>Método</th>
+                    <th>Estado</th>
+                    <th class="text-end">Total Compra</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in compras %}
+                <tr>
+                    <td>#{{ c.pk }}</td>
+                    <td>{{ c.fecha|date:"d/m/Y H:i" }}</td>
+                    <td class="fw-bold text-white">{{ c.proveedor.nombre }}</td>
+                    <td>{{ c.numero_factura_proveedor|default:"-" }}</td>
+                    <td>{{ c.get_metodo_pago_display }}</td>
+                    <td>
+                        <span class="badge-pos {% if c.estado == 'recibida_pagada' %}badge-success{% else %}badge-warning{% endif %}">
+                            {{ c.get_estado_display }}
+                        </span>
+                    </td>
+                    <td class="text-end fw-bold">${{ c.total|floatformat:0 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No hay compras registradas aún.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

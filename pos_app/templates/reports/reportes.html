@@ -1,330 +1,159 @@
 {% extends 'base/base.html' %}
-{% block title %}Reportes — POS Pro{% endblock %}
-{% block page_title %}Reportes y Estadísticas{% endblock %}
+{% block title %}Reportes Financieros & Utilidad Real — PetPOS Pro{% endblock %}
+{% block page_title %}Reportes Financieros & Ganancia Estimada{% endblock %}
 
 {% block content %}
-
-<!-- Filtros de período -->
-<div class="card-pos mb-4">
-    <div class="card-pos-body">
-        <form method="get" class="d-flex gap-3 flex-wrap align-items-end">
-            <div>
-                <label class="form-label">Período Rápido</label>
-                <div class="d-flex gap-2">
-                    {% for p, label in peridos_choices %}{% endfor %}
-                    <a href="?periodo=hoy" class="btn-outline-pos {% if periodo == 'hoy' %}active{% endif %}" style="{% if periodo == 'hoy' %}background:var(--accent);color:#fff;{% endif %}">Hoy</a>
-                    <a href="?periodo=semana" class="btn-outline-pos" style="{% if periodo == 'semana' %}background:var(--accent);color:#fff;{% endif %}">7 días</a>
-                    <a href="?periodo=mes" class="btn-outline-pos" style="{% if periodo == 'mes' %}background:var(--accent);color:#fff;{% endif %}">Este mes</a>
-                    <a href="?periodo=año" class="btn-outline-pos" style="{% if periodo == 'año' %}background:var(--accent);color:#fff;{% endif %}">Este año</a>
-                </div>
-            </div>
-            <div>
-                <label class="form-label">Fecha Inicio</label>
-                <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="form-control" style="width:150px">
-            </div>
-            <div>
-                <label class="form-label">Fecha Fin</label>
-                <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="form-control" style="width:150px">
-            </div>
-            <button type="submit" name="periodo" value="personalizado" class="btn-accent" style="align-self:flex-end">
-                Aplicar
-            </button>
-        </form>
-    </div>
+<!-- Filtros por período -->
+<div class="card-pos p-3 mb-4">
+    <form method="get" class="row g-3 align-items-center">
+        <div class="col-auto">
+            <span class="text-secondary small fw-bold">Período:</span>
+        </div>
+        <div class="col-auto">
+            <select name="periodo" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="hoy" {% if periodo == 'hoy' %}selected{% endif %}>Hoy</option>
+                <option value="semana" {% if periodo == 'semana' %}selected{% endif %}>Últimos 7 Días</option>
+                <option value="mes" {% if periodo == 'mes' %}selected{% endif %}>Mes Actual</option>
+                <option value="año" {% if periodo == 'año' %}selected{% endif %}>Año Actual</option>
+            </select>
+        </div>
+        <div class="col-auto ms-auto">
+            <a href="{% url 'reporte_diario' %}" class="btn btn-outline-pos btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Exportar PDF</a>
+        </div>
+    </form>
 </div>
 
-<!-- KPIs -->
+<!-- Tarjetas de Resumen Económico -->
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3">
+    <div class="col-md-3">
         <div class="stat-card accent">
-            <div class="stat-icon accent"><i class="bi bi-receipt-cutoff"></i></div>
-            <div class="stat-label">Total Ventas</div>
-            <div class="stat-value">{{ resumen.num_ventas }}</div>
-            <div class="stat-sub">transacciones</div>
+            <div class="stat-icon accent"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-label">Ingresos Brutos Totales</div>
+            <div class="stat-value">${{ total_ventas|floatformat:0 }}</div>
+            <div class="stat-sub">Productos: ${{ ingresos_productos|floatformat:0 }} | Peluquería: ${{ ingresos_peluqueria|floatformat:0 }}</div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
+    <div class="col-md-3">
         <div class="stat-card info">
-            <div class="stat-icon info"><i class="bi bi-cash-stack"></i></div>
-            <div class="stat-label">Ingresos</div>
-            <div class="stat-value">${{ resumen.total_ventas|floatformat:0 }}</div>
+            <div class="stat-icon info"><i class="bi bi-boxes"></i></div>
+            <div class="stat-label">Margen Bruto Productos</div>
+            <div class="stat-value">${{ ganancia_productos|floatformat:0 }}</div>
+            <div class="stat-sub">Costo mercancía vendida: ${{ costo_productos|floatformat:0 }}</div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card success">
-            <div class="stat-icon success"><i class="bi bi-graph-up-arrow"></i></div>
-            <div class="stat-label">Ganancias</div>
-            <div class="stat-value">${{ resumen.total_ganancias|floatformat:0 }}</div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
+    <div class="col-md-3">
         <div class="stat-card warning">
-            <div class="stat-icon warning"><i class="bi bi-ticket-perforated"></i></div>
-            <div class="stat-label">Ticket Promedio</div>
-            <div class="stat-value">${{ ticket_promedio|floatformat:0 }}</div>
+            <div class="stat-icon warning"><i class="bi bi-scissors"></i></div>
+            <div class="stat-label">Margen Peluquería Negocio</div>
+            <div class="stat-value">${{ parte_negocio_peluqueria|floatformat:0 }}</div>
+            <div class="stat-sub">Comisiones pagadas (50%): ${{ comisiones_peluqueria|floatformat:0 }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <div class="stat-icon success"><i class="bi bi-bank"></i></div>
+            <div class="stat-label">Resultado Económico Neto</div>
+            <div class="stat-value">${{ resultado_economico_neto|floatformat:0 }}</div>
+            <div class="stat-sub">Tras descontar gastos y pagos personal</div>
         </div>
     </div>
 </div>
 
-<!-- Gráfico principal por día + Métodos de pago -->
-<div class="row g-3 mb-4">
-    <div class="col-xl-8">
-        <div class="card-pos">
+<!-- Desglose de Gastos y Medios de Pago -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card-pos h-100">
             <div class="card-pos-header">
-                <span><i class="bi bi-bar-chart-line me-2" style="color:var(--accent)"></i>Ventas y Ganancias por Día</span>
+                <span><i class="bi bi-pie-chart me-2 text-info"></i>Medios de Pago Recibidos en el Período</span>
             </div>
-            <div class="card-pos-body">
-                {% if labels_dias %}
-                <canvas id="chartDias" height="110"></canvas>
-                {% else %}
-                <div style="text-align:center;padding:60px;color:var(--text-muted)">
-                    <i class="bi bi-bar-chart" style="font-size:40px;display:block;margin-bottom:12px;opacity:0.3"></i>
-                    Sin datos en este período
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-4">
-        <div class="card-pos">
-            <div class="card-pos-header">
-                <span><i class="bi bi-pie-chart me-2" style="color:var(--info)"></i>Métodos de Pago</span>
-            </div>
-            <div class="card-pos-body">
-                {% if por_metodo %}
-                <canvas id="chartMetodos" height="160"></canvas>
-                <div class="mt-3">
-                    {% for m in por_metodo %}
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span style="font-size:13px;font-weight:600">{{ m.metodo_pago|capfirst }}</span>
-                        <div style="text-align:right">
-                            <span style="font-size:13px;font-weight:700">${{ m.total|floatformat:0 }}</span>
-                            <span style="font-size:11px;color:var(--text-muted);margin-left:6px">({{ m.num }} vtas)</span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p style="text-align:center;color:var(--text-muted);padding:40px 0">Sin datos</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Top productos + Ventas mensuales -->
-<div class="row g-3 mb-4">
-    <div class="col-xl-6">
-        <div class="card-pos">
-            <div class="card-pos-header">
-                <span><i class="bi bi-trophy me-2" style="color:var(--warning)"></i>Top 10 Productos del Período</span>
-            </div>
-            <div class="p-0">
+            <div class="card-pos-body p-4">
                 <table class="table table-pos mb-0">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Producto</th>
-                            <th>Unidades</th>
-                            <th>Ingresos</th>
-                            <th>Ganancia</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in top_productos %}
-                        <tr>
-                            <td style="font-weight:800;color:var(--warning)">{{ forloop.counter }}</td>
-                            <td>
-                                <div style="font-size:13px;font-weight:600">{{ p.producto__nombre }}</div>
-                                <div style="font-size:11px;color:var(--text-muted)">{{ p.producto__sku }}</div>
-                            </td>
-                            <td style="font-weight:700">{{ p.qty }}</td>
-                            <td>${{ p.ingresos|floatformat:0 }}</td>
-                            <td style="color:var(--success);font-weight:600">${{ p.ganancia|floatformat:0 }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted)">Sin datos</td></tr>
-                        {% endfor %}
-                    </tbody>
+                    <tr>
+                        <td><i class="bi bi-cash text-success me-2"></i>Efectivo Físico en Caja:</td>
+                        <td class="text-end fw-bold text-success">${{ total_efectivo|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-phone text-info me-2"></i>Transferencias Bancarias (Nequi/Daviplata/Bancolombia):</td>
+                        <td class="text-end fw-bold text-info">${{ total_transferencia|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-credit-card text-warning me-2"></i>Tarjetas Débito / Crédito:</td>
+                        <td class="text-end fw-bold text-warning">${{ total_tarjeta|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-three-dots text-secondary me-2"></i>Otros Medios:</td>
+                        <td class="text-end fw-bold text-secondary">${{ total_otros_medios|floatformat:0 }}</td>
+                    </tr>
+                    <tr class="border-top" style="border-color: var(--border) !important;">
+                        <td class="fw-bold text-white fs-5 pt-2">TOTAL COBRADO:</td>
+                        <td class="text-end fw-bold text-white fs-5 pt-2">${{ total_ventas|floatformat:0 }}</td>
+                    </tr>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-6">
-        <div class="card-pos">
+    <div class="col-md-6">
+        <div class="card-pos h-100">
             <div class="card-pos-header">
-                <span><i class="bi bi-calendar3 me-2" style="color:var(--info)"></i>Ventas Últimos 12 Meses</span>
+                <span><i class="bi bi-calculator me-2 text-danger"></i>Estructura de Costos y Egresos</span>
             </div>
-            <div class="card-pos-body">
-                {% if labels_meses %}
-                <canvas id="chartMeses" height="200"></canvas>
-                {% else %}
-                <div style="text-align:center;padding:60px;color:var(--text-muted)">Sin datos</div>
-                {% endif %}
+            <div class="card-pos-body p-4">
+                <table class="table table-pos mb-0">
+                    <tr>
+                        <td>Costo de Mercancía Vendida (COGS):</td>
+                        <td class="text-end text-danger fw-bold">-${{ costo_productos|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Comisiones de Peluquería Generadas (50%):</td>
+                        <td class="text-end text-danger fw-bold">-${{ comisiones_peluqueria|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Pagos al Resto del Personal / Ayudantes:</td>
+                        <td class="text-end text-danger fw-bold">-${{ pagos_personal|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Gastos Operativos (Arriendo, Luz, Aseo):</td>
+                        <td class="text-end text-danger fw-bold">-${{ gastos_operativos|floatformat:0 }}</td>
+                    </tr>
+                    <tr class="border-top" style="border-color: var(--border) !important;">
+                        <td class="fw-bold text-success fs-5 pt-2">UTILIDAD NETA ESTIMADA:</td>
+                        <td class="text-end fw-bold text-success fs-4 pt-2">${{ resultado_economico_neto|floatformat:0 }}</td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Stock bajo -->
-{% if stock_bajo %}
+<!-- Top Productos Vendidos -->
 <div class="card-pos">
-    <div class="card-pos-header" style="border-color:rgba(245,158,11,0.3)">
-        <span style="color:var(--warning)"><i class="bi bi-exclamation-triangle me-2"></i>Alerta: Productos con Stock Bajo ({{ stock_bajo.count }})</span>
-        <a href="{% url 'inventario' %}?stock=bajo" class="btn-outline-pos" style="font-size:12px;padding:5px 12px;border-color:rgba(245,158,11,0.3);color:var(--warning)">
-            Ver inventario →
-        </a>
+    <div class="card-pos-header">
+        <span><i class="bi bi-award-fill me-2 text-warning"></i>Top Productos Más Vendidos</span>
     </div>
-    <div class="p-0">
+    <div class="card-pos-body p-0">
         <table class="table table-pos mb-0">
             <thead>
                 <tr>
-                    <th>SKU</th>
                     <th>Producto</th>
-                    <th>Categoría</th>
-                    <th>Stock Actual</th>
-                    <th>Stock Mínimo</th>
-                    <th>Estado</th>
-                    <th></th>
+                    <th>Código / SKU</th>
+                    <th class="text-center">Unidades Vendidas</th>
+                    <th class="text-end">Ingresos Generados</th>
                 </tr>
             </thead>
             <tbody>
-                {% for p in stock_bajo %}
+                {% for tp in top_productos %}
                 <tr>
-                    <td><span class="badge-pos badge-accent">{{ p.sku }}</span></td>
-                    <td style="font-weight:600">{{ p.nombre }}</td>
-                    <td style="color:var(--text-secondary);font-size:13px">{{ p.categoria.nombre|default:"—" }}</td>
-                    <td>
-                        <span style="font-size:18px;font-weight:800;color:{% if p.stock == 0 %}var(--danger){% else %}var(--warning){% endif %}">
-                            {{ p.stock }}
-                        </span>
-                    </td>
-                    <td style="color:var(--text-muted)">{{ p.stock_minimo }}</td>
-                    <td>
-                        {% if p.stock == 0 %}
-                            <span class="badge-pos badge-danger">Sin stock</span>
-                        {% else %}
-                            <span class="badge-pos badge-warning">Stock bajo</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'producto_editar' p.pk %}" class="btn-outline-pos" style="font-size:12px;padding:4px 10px">Editar</a>
-                    </td>
+                    <td class="fw-bold text-white">{{ tp.producto__nombre }}</td>
+                    <td>{{ tp.sku_producto }}</td>
+                    <td class="text-center fw-bold">{{ tp.qty }}</td>
+                    <td class="text-end text-success fw-bold">${{ tp.ingresos|floatformat:0 }}</td>
                 </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4">No hay ventas registradas en este período.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
-{% endif %}
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-const chartDefaults = {
-    plugins: {
-        legend: { labels: { color: '#8b8fa8', font: { family: 'Plus Jakarta Sans', size: 12 }, boxWidth: 12 } },
-        tooltip: { callbacks: { label: ctx => ` $${ctx.raw.toLocaleString('es-CO')}` } }
-    },
-    scales: {
-        x: { grid: { color: '#252840' }, ticks: { color: '#8b8fa8', font: { size: 11 } } },
-        y: { grid: { color: '#252840' }, ticks: { color: '#8b8fa8', callback: v => '$' + v.toLocaleString('es-CO') } }
-    }
-};
-
-// Chart por días
-{% if labels_dias %}
-new Chart(document.getElementById('chartDias').getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: {{ labels_dias|safe }},
-        datasets: [
-            {
-                label: 'Ventas',
-                data: {{ data_ventas_dia|safe }},
-                backgroundColor: 'rgba(108,99,255,0.5)',
-                borderColor: '#6c63ff',
-                borderWidth: 2,
-                borderRadius: 5,
-                order: 2,
-            },
-            {
-                label: 'Ganancias',
-                type: 'line',
-                data: {{ data_ganancias_dia|safe }},
-                borderColor: '#22c55e',
-                backgroundColor: 'rgba(34,197,94,0.08)',
-                borderWidth: 2,
-                pointRadius: 3,
-                fill: true,
-                tension: 0.4,
-                order: 1,
-            }
-        ]
-    },
-    options: { ...chartDefaults, responsive: true }
-});
-{% endif %}
-
-// Chart métodos de pago
-{% if por_metodo %}
-const metodos = {{ por_metodo|safe }};
-new Chart(document.getElementById('chartMetodos').getContext('2d'), {
-    type: 'doughnut',
-    data: {
-        labels: metodos.map(m => m.metodo_pago.charAt(0).toUpperCase() + m.metodo_pago.slice(1)),
-        datasets: [{
-            data: metodos.map(m => m.total),
-            backgroundColor: ['#6c63ff','#22c55e','#38bdf8','#f59e0b','#ef4444'],
-            borderWidth: 0,
-            hoverOffset: 6,
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { position: 'bottom', labels: { color: '#8b8fa8', padding: 12, font: { size: 12 } } },
-            tooltip: { callbacks: { label: ctx => ` $${ctx.raw.toLocaleString('es-CO')}` } }
-        }
-    }
-});
-{% endif %}
-
-// Chart mensual
-{% if labels_meses %}
-new Chart(document.getElementById('chartMeses').getContext('2d'), {
-    type: 'line',
-    data: {
-        labels: {{ labels_meses|safe }},
-        datasets: [
-            {
-                label: 'Ventas',
-                data: {{ data_ventas_mes|safe }},
-                borderColor: '#6c63ff',
-                backgroundColor: 'rgba(108,99,255,0.08)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: '#6c63ff',
-            },
-            {
-                label: 'Ganancias',
-                data: {{ data_ganancias_mes|safe }},
-                borderColor: '#22c55e',
-                backgroundColor: 'rgba(34,197,94,0.06)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: '#22c55e',
-            }
-        ]
-    },
-    options: { ...chartDefaults, responsive: true }
-});
-{% endif %}
-</script>
 {% endblock %}

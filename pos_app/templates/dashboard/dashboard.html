@@ -1,135 +1,230 @@
 {% extends 'base/base.html' %}
-
-{% block title %}Dashboard — POS Pro{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block title %}Dashboard General — PetPOS Pro{% endblock %}
+{% block page_title %}Panel de Control & Indicadores{% endblock %}
 
 {% block content %}
-
-<div class="d-flex justify-content-end mb-3">
-    <a href="{% url 'reporte_diario' %}" class="btn-accent">
-        <i class="bi bi-printer me-1"></i> Imprimir reporte del día
-    </a>
-    <a href="{% url 'egresos_page' %}" class="btn-accent ms-2">
-        <i class="bi bi-cash-coin me-1"></i> Registrar egreso
-    </a>
-    <a href="{% url 'eliminar_egresos' %}" 
-   class="btn btn-danger ms-2"
-   onclick="return confirm('¿Seguro que quieres borrar TODOS los egresos?')">
-   🗑 Borrar egresos
-</a>
-
+<!-- Banner Estado de Caja -->
+<div class="mb-4">
+    {% if caja_activa %}
+    <div class="card-pos p-3 d-flex flex-row justify-content-between align-items-center" style="border-left: 4px solid var(--success);">
+        <div class="d-flex align-items-center gap-3">
+            <div class="badge-pos badge-success fs-6 px-3 py-2">
+                <i class="bi bi-unlock-fill me-1"></i> Caja Abierta (#{{ caja_activa.pk }})
+            </div>
+            <div>
+                <small class="text-secondary">Apertura: {{ caja_activa.fecha_apertura|date:"d/m/Y H:i" }} | Base: ${{ caja_activa.monto_inicial_efectivo|floatformat:0 }}</small>
+                <div class="fw-bold fs-5">Efectivo en Caja: <span class="text-success">${{ efectivo_en_caja|floatformat:0 }}</span> &nbsp;|&nbsp; Bancos Hoy: <span class="text-info">${{ banco_dia|floatformat:0 }}</span></div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'caja_detalle' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-calculator me-1"></i> Arqueo & Cierre</a>
+            <a href="{% url 'pos' %}" class="btn btn-accent btn-sm"><i class="bi bi-cart4 me-1"></i> Ir al POS</a>
+        </div>
+    </div>
+    {% else %}
+    <div class="card-pos p-3 d-flex flex-row justify-content-between align-items-center" style="border-left: 4px solid var(--warning);">
+        <div class="d-flex align-items-center gap-3">
+            <div class="badge-pos badge-warning fs-6 px-3 py-2">
+                <i class="bi bi-lock-fill me-1"></i> Caja Cerrada
+            </div>
+            <div>
+                <span class="text-secondary">No hay turno de caja abierto en este momento. Las ventas se registrarán sin sesión vinculada.</span>
+            </div>
+        </div>
+        <a href="{% url 'caja_detalle' %}" class="btn btn-accent btn-sm"><i class="bi bi-key-fill me-1"></i> Abrir Caja del Día</a>
+    </div>
+    {% endif %}
 </div>
 
-<!-- 🔥 Stat Cards Row (ACTUALIZADO) -->
+<!-- Estadísticas Principales del Día -->
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3">
+    <!-- Total Ventas Hoy -->
+    <div class="col-md-3">
         <div class="stat-card accent">
             <div class="stat-icon accent"><i class="bi bi-cash-stack"></i></div>
-            <div class="stat-label">Ventas Hoy</div>
-            <div class="stat-value">${{ total_hoy|floatformat:0 }}</div>
-            <div class="stat-sub">{{ num_ventas_hoy }} transacciones</div>
+            <div class="stat-label">Ventas Totales Hoy</div>
+            <div class="stat-value">${{ total_ventas_hoy|floatformat:0 }}</div>
+            <div class="stat-sub"><i class="bi bi-receipt me-1"></i>{{ num_ventas_hoy }} comprobantes emitidos</div>
         </div>
     </div>
 
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card success">
-            <div class="stat-icon success"><i class="bi bi-graph-up-arrow"></i></div>
-            <div class="stat-label">Ganancia Hoy</div>
-            <div class="stat-value">${{ ganancia_hoy|floatformat:0 }}</div>
-            <div class="stat-sub">Ganancia del sistema</div>
-        </div>
-    </div>
-
-    <!-- 🔥 NUEVO -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card danger">
-            <div class="stat-icon danger"><i class="bi bi-cash-coin"></i></div>
-            <div class="stat-label">Egresos Hoy</div>
-            <div class="stat-value">${{ egresos_hoy|floatformat:0 }}</div>
-            <div class="stat-sub">Gastos del día</div>
-        </div>
-    </div>
-
-    <!-- 🔥 NUEVO -->
-    <div class="col-sm-6 col-xl-3">
+    <!-- Ingresos Peluquería Canina -->
+    <div class="col-md-3">
         <div class="stat-card info">
-            <div class="stat-icon info"><i class="bi bi-calculator"></i></div>
-            <div class="stat-label">Utilidad Real</div>
-            <div class="stat-value">${{ utilidad_real_hoy|floatformat:0 }}</div>
-            <div class="stat-sub">Ganancia - egresos</div>
+            <div class="stat-icon info"><i class="bi bi-scissors"></i></div>
+            <div class="stat-label">Peluquería de Mascotas</div>
+            <div class="stat-value">${{ total_servicios_hoy|floatformat:0 }}</div>
+            <div class="stat-sub"><i class="bi bi-award me-1"></i>{{ cantidad_servicios_hoy }} atenciones realizadas</div>
+        </div>
+    </div>
+
+    <!-- Comisiones Peluquero 50% -->
+    <div class="col-md-3">
+        <div class="stat-card warning">
+            <div class="stat-icon warning"><i class="bi bi-person-badge"></i></div>
+            <div class="stat-label">Comisiones Peluquero (50%)</div>
+            <div class="stat-value">${{ comisiones_peluquero_hoy|floatformat:0 }}</div>
+            <div class="stat-sub text-warning">Adelantos entregados: ${{ adelantos_peluquero_hoy|floatformat:0 }}</div>
+        </div>
+    </div>
+
+    <!-- Ganancia Real Estimada -->
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <div class="stat-icon success"><i class="bi bi-trophy"></i></div>
+            <div class="stat-label">Ganancia Neta Estimada</div>
+            <div class="stat-value">${{ ganancia_estimada_hoy|floatformat:0 }}</div>
+            <div class="stat-sub">Tras costos prod, comisiones y gastos</div>
         </div>
     </div>
 </div>
 
-<!-- Charts Row -->
+<!-- Desglose Económico Rápido -->
 <div class="row g-3 mb-4">
-    <div class="col-xl-8">
-        <div class="card-pos">
-            <div class="card-pos-header">
-                <span><i class="bi bi-activity me-2" style="color:var(--accent)"></i>
-                    Ventas, Ganancias y Egresos — Últimos 7 Días
-                </span>
-            </div>
-            <div class="card-pos-body">
-                <canvas id="chart7dias" height="100"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-4">
+    <div class="col-md-8">
         <div class="card-pos h-100">
             <div class="card-pos-header">
-                <span><i class="bi bi-trophy me-2" style="color:var(--warning)"></i>Top Productos (Mes)</span>
+                <span><i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>Tendencia Últimos 7 Días (Ventas vs Servicios)</span>
             </div>
             <div class="card-pos-body">
-                {% for p in top_productos %}
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div class="d-flex align-items-center gap-2" style="min-width:0">
-                        <span class="badge-pos badge-accent">{{ forloop.counter }}</span>
-                        <div>
-                            <div style="font-size:13px;font-weight:600">{{ p.producto__nombre }}</div>
-                            <div style="font-size:11px;color:var(--text-muted)">{{ p.total_qty }} unidades</div>
-                        </div>
-                    </div>
-                    <div style="font-weight:700">${{ p.total_ingresos|floatformat:0 }}</div>
+                <canvas id="chart7Dias" height="95"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card-pos h-100">
+            <div class="card-pos-header">
+                <span><i class="bi bi-pie-chart-fill me-2 text-warning"></i>Desglose Financiero Hoy</span>
+            </div>
+            <div class="card-pos-body p-3">
+                <ul class="list-group list-group-flush bg-transparent">
+                    <li class="list-group-item bg-transparent text-light d-flex justify-content-between px-0">
+                        <span><i class="bi bi-bag-check me-2 text-info"></i>Productos Vendidos:</span>
+                        <strong>${{ ingresos_productos_hoy|floatformat:0 }}</strong>
+                    </li>
+                    <li class="list-group-item bg-transparent text-light d-flex justify-content-between px-0">
+                        <span><i class="bi bi-box me-2 text-secondary"></i>Costo de Productos:</span>
+                        <span class="text-danger">-${{ ganancia_productos_hoy|floatformat:0 }}</span>
+                    </li>
+                    <li class="list-group-item bg-transparent text-light d-flex justify-content-between px-0">
+                        <span><i class="bi bi-scissors me-2 text-info"></i>Parte Peluquería Negocio:</span>
+                        <strong class="text-success">+${{ parte_negocio_peluqueria_hoy|floatformat:0 }}</strong>
+                    </li>
+                    <li class="list-group-item bg-transparent text-light d-flex justify-content-between px-0">
+                        <span><i class="bi bi-people me-2 text-warning"></i>Pagos Personal / Nómina:</span>
+                        <span class="text-danger">-${{ pagos_personal_hoy|floatformat:0 }}</span>
+                    </li>
+                    <li class="list-group-item bg-transparent text-light d-flex justify-content-between px-0">
+                        <span><i class="bi bi-wallet2 me-2 text-danger"></i>Otros Gastos Operativos:</span>
+                        <span class="text-danger">-${{ total_egresos_hoy|floatformat:0 }}</span>
+                    </li>
+                </ul>
+                <div class="mt-3 p-2 rounded text-center" style="background: rgba(34, 197, 94, 0.1); border: 1px dashed var(--success);">
+                    <small class="text-secondary d-block">Margen Estimado de la Jornada</small>
+                    <span class="fs-4 fw-bold text-success">${{ ganancia_estimada_hoy|floatformat:0 }}</span>
                 </div>
-                {% empty %}
-                <p style="text-align:center;color:var(--text-muted)">Sin ventas este mes</p>
-                {% endfor %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Recent Sales -->
+<!-- Tablas de Actividad Reciente -->
 <div class="row g-3">
-    <div class="col-xl-8">
+    <!-- Últimas Ventas -->
+    <div class="col-md-7">
         <div class="card-pos">
             <div class="card-pos-header">
-                <span><i class="bi bi-receipt me-2"></i>Últimas Ventas</span>
+                <span><i class="bi bi-clock-history me-2"></i>Últimas Ventas Registradas</span>
+                <a href="{% url 'historial_ventas' %}" class="btn-outline-pos btn-sm">Ver Todas</a>
             </div>
             <div class="card-pos-body p-0">
                 <table class="table table-pos mb-0">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>Fecha</th>
-                            <th>Productos</th>
-                            <th>Pago</th>
-                            <th>Total</th>
-                            <th>Ganancia</th>
+                            <th>N° Venta</th>
+                            <th>Hora</th>
+                            <th>Artículos</th>
+                            <th>Método</th>
+                            <th class="text-end">Total</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for venta in ultimas_ventas %}
+                        {% for v in ultimas_ventas %}
                         <tr>
-                            <td>#{{ venta.pk }}</td>
-                            <td>{{ venta.fecha|date:"d/m/Y H:i" }}</td>
-                            <td>{{ venta.detalles.count }}</td>
-                            <td>{{ venta.get_metodo_pago_display }}</td>
-                            <td>${{ venta.total_venta|floatformat:0 }}</td>
-                            <td style="color:green">${{ venta.total_ganancia|floatformat:0 }}</td>
+                            <td><span class="badge-pos badge-accent">#{{ v.pk }}</span></td>
+                            <td>{{ v.fecha|date:"H:i" }}</td>
+                            <td>
+                                {% for d in v.detalles.all %}
+                                    <small class="d-block">{{ d.cantidad }}x {{ d.nombre_producto|default:d.producto.nombre }}</small>
+                                {% endfor %}
+                                {% for s in v.servicios_peluqueria.all %}
+                                    <small class="d-block text-info"><i class="bi bi-scissors me-1"></i>{{ s.nombre_servicio }} ({{ s.peluquero.nombre }})</small>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <span class="badge-pos {% if v.metodo_pago == 'efectivo' %}badge-success{% elif v.metodo_pago == 'transferencia' %}badge-info{% else %}badge-warning{% endif %}">
+                                    {{ v.get_metodo_pago_display }}
+                                </span>
+                            </td>
+                            <td class="text-end fw-bold">${{ v.total_venta|floatformat:0 }}</td>
+                            <td>
+                                <a href="{% url 'venta_detalle' v.pk %}" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-eye"></i></a>
+                            </td>
                         </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No hay ventas registradas hoy.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liquidaciones del Peluquero Abiertas -->
+    <div class="col-md-5">
+        <div class="card-pos">
+            <div class="card-pos-header">
+                <span><i class="bi bi-scissors me-2 text-warning"></i>Liquidaciones de Peluquería</span>
+                <a href="{% url 'peluqueria_dashboard' %}" class="btn-outline-pos btn-sm">Gestión</a>
+            </div>
+            <div class="card-pos-body p-0">
+                <div class="p-3 border-bottom" style="border-color: var(--border) !important;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary">Acción Rápida:</span>
+                        <a href="{% url 'adelanto_registrar' %}" class="btn btn-warning btn-sm text-dark fw-bold">
+                            <i class="bi bi-cash me-1"></i> Registrar Adelanto
+                        </a>
+                    </div>
+                </div>
+                <table class="table table-pos mb-0">
+                    <thead>
+                        <tr>
+                            <th>Peluquero</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th class="text-end">Saldo</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in liquidaciones_abiertas %}
+                        <tr>
+                            <td>{{ l.peluquero.nombre }}</td>
+                            <td>{{ l.fecha_jornada|date:"d/m" }}</td>
+                            <td>
+                                <span class="badge-pos {% if l.estado == 'liquidada' %}badge-success{% elif l.estado == 'parcial' %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ l.get_estado_display }}
+                                </span>
+                            </td>
+                            <td class="text-end fw-bold text-warning">${{ l.saldo_pendiente|floatformat:0 }}</td>
+                            <td>
+                                <a href="{% url 'liquidacion_jornada' l.peluquero.pk %}" class="btn btn-sm btn-accent py-0">Liquidar</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Todas las comisiones están al día.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -137,56 +232,44 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    const labels = {{ labels_7dias|safe }};
+    const ventasData = {{ data_ventas_7dias|safe }};
+    const serviciosData = {{ data_servicios_7dias|safe }};
 
-// 🔥 DATOS
-const labels7 = {{ labels_7dias|safe }};
-const dataV7 = {{ data_ventas_7dias|safe }};
-const dataG7 = {{ data_ganancias_7dias|safe }};
-const dataE7 = {{ data_egresos_7dias|safe }}; // 👈 NUEVO
-
-const ctx7 = document.getElementById('chart7dias').getContext('2d');
-
-new Chart(ctx7, {
-    type: 'bar',
-    data: {
-        labels: labels7,
-        datasets: [
-            {
-                label: 'Ventas',
-                data: dataV7,
-                backgroundColor: 'rgba(108,99,255,0.5)',
-                borderColor: '#6c63ff',
-                borderWidth: 2,
-                order: 3
+    const ctx = document.getElementById('chart7Dias').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Venta Productos ($)',
+                    data: ventasData,
+                    backgroundColor: 'rgba(108, 99, 255, 0.75)',
+                    borderRadius: 6
+                },
+                {
+                    label: 'Peluquería ($)',
+                    data: serviciosData,
+                    backgroundColor: 'rgba(56, 189, 248, 0.75)',
+                    borderRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#8b8fa8' } }
             },
-            {
-                label: 'Ganancias',
-                data: dataG7,
-                type: 'line',
-                borderColor: '#22c55e',
-                backgroundColor: 'rgba(34,197,94,0.1)',
-                borderWidth: 2,
-                tension: 0.4,
-                order: 2
-            },
-            {
-                label: 'Egresos',
-                data: dataE7,
-                type: 'line',
-                borderColor: '#ef4444',
-                backgroundColor: 'rgba(239,68,68,0.1)',
-                borderWidth: 2,
-                tension: 0.4,
-                order: 1
+            scales: {
+                x: { ticks: { color: '#8b8fa8' }, grid: { display: false } },
+                y: { ticks: { color: '#8b8fa8' }, grid: { color: '#252840' } }
             }
-        ]
-    }
-});
-
+        }
+    });
 </script>
 {% endblock %}
