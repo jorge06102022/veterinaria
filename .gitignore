@@ -5,3 +5,8 @@ db.sqlite3
 *.json
 .env
 staticfiles/
+*.zip
+auditar_rutas.py
+generar_informe_pdf.py
+verificar_vistas.py
+pos_app/validar_dom_proveedores.py
