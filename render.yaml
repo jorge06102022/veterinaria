@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: petpos-pro
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn pos_project.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        fromDatabase:
+          name: petpos-pro-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: tatiana
+      - key: DJANGO_SUPERUSER_PASSWORD
+        value: tati2026
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: tatiana@petpospro.com
+
+databases:
+  - name: petpos-pro-db
+    databaseName: petpos_pro
+    user: petpos_admin
+    plan: free

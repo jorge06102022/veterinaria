@@ -1,7 +1,3 @@
 #!/usr/bin/env bash
-
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
-python manage.py create_admin
-
-gunicorn pos_project.wsgi:application
+# start.sh - Comando de inicio del servidor en Render
+exec gunicorn pos_project.wsgi:application --bind 0.0.0.0:$PORT
