@@ -1,54 +1,67 @@
 {% extends 'base/base.html' %}
+{% load static %}
 {% block title %}Panel Principal — PetPOS Pro{% endblock %}
-{% block page_title %}Panel de Control & Indicadores{% endblock %}
+{% block page_title %}Panel de Control & Indicadores Ejecutivos{% endblock %}
 
 {% block content %}
-<!-- Banner Estado de Caja y Saludo -->
+<!-- Cabecera Compacta: Saludo, Fecha y Estado de Turno de Caja -->
 <div class="mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h4 class="fw-bold text-dark mb-1" style="color: var(--brand-deep) !important;">
-                ¡Hola, {{ request.user.username|title }}! 👋
-            </h4>
-            <p class="text-muted small mb-0">Resumen operativo y financiero de la jornada.</p>
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--brand-glow); display: flex; align-items: center; justify-content: center; padding: 8px;">
+                <img src="{% static 'img/petpos-paw.svg' %}" alt="PetPOS Pro" width="28" height="28">
+            </div>
+            <div>
+                <h4 class="fw-bold mb-0" style="color: var(--brand-petroleum); letter-spacing: -0.4px;">
+                    ¡Buen día, {{ request.user.username|title }}!
+                </h4>
+                <p class="text-muted small mb-0">Resumen integral de ventas, peluquería y finanzas en tiempo real.</p>
+            </div>
         </div>
-        <div class="text-end">
-            <span class="badge-pos badge-info py-2 px-3 fs-6">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge-pos badge-info py-2 px-3" style="font-size: 13px;">
                 <i class="bi bi-calendar3 me-1"></i> {% now "l, j \d\e F \d\e Y" %}
             </span>
         </div>
     </div>
 
+    <!-- Banner de Estado de Caja -->
     {% if caja_activa %}
-    <div class="card-pos p-3 d-flex flex-row justify-content-between align-items-center" style="border-left: 4px solid var(--brand-primary); background: #FFFFFF;">
-        <div class="d-flex align-items-center gap-3">
-            <div class="badge-pos badge-success fs-6 px-3 py-2">
-                <i class="bi bi-unlock-fill me-1"></i> Caja Abierta (#{{ caja_activa.pk }})
-            </div>
-            <div>
-                <small class="text-muted">Apertura: {{ caja_activa.fecha_apertura|date:"H:i" }} &bull; Base inicial: <strong>${{ caja_activa.monto_inicial_efectivo|floatformat:0 }}</strong></small>
-                <div class="fw-bold fs-5" style="color: var(--brand-deep);">
-                    Efectivo en Gaveta: <span class="text-success">${{ efectivo_en_caja|floatformat:0 }}</span> &nbsp;|&nbsp; 
-                    Bancos Hoy: <span class="text-primary" style="color: var(--brand-deep) !important;">${{ banco_dia|floatformat:0 }}</span>
+    <div class="card-pos p-3 mb-0" style="border-left: 4px solid var(--brand-emerald); background: #FFFFFF;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="badge-pos badge-success fs-6 px-3 py-2">
+                    <i class="bi bi-unlock-fill me-1"></i> Caja Abierta (#{{ caja_activa.pk }})
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        Apertura: <strong>{{ caja_activa.fecha_apertura|date:"H:i" }}</strong> &bull; Base inicial: <strong>${{ caja_activa.monto_inicial_efectivo|floatformat:0 }}</strong>
+                    </div>
+                    <div class="fw-bold fs-5 mt-1" style="color: var(--brand-petroleum);">
+                        Efectivo en Gaveta: <span style="color: var(--brand-emerald);">${{ efectivo_en_caja|floatformat:0 }}</span> &nbsp;|&nbsp; 
+                        Bancos Hoy: <span style="color: var(--brand-petroleum);">${{ banco_dia|floatformat:0 }}</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'caja_detalle' %}" class="btn btn-outline-pos btn-sm"><i class="bi bi-calculator me-1"></i> Arqueo & Cierre</a>
-            <a href="{% url 'pos' %}" class="btn btn-accent btn-sm"><i class="bi bi-cart4 me-1"></i> Ir al POS</a>
+            <div class="d-flex gap-2">
+                <a href="{% url 'caja_detalle' %}" class="btn-outline-pos btn-sm"><i class="bi bi-calculator me-1"></i> Arqueo & Cierre</a>
+                <a href="{% url 'pos' %}" class="btn-accent btn-sm"><i class="bi bi-cart4 me-1"></i> Ir al Punto de Venta</a>
+            </div>
         </div>
     </div>
     {% else %}
-    <div class="card-pos p-3 d-flex flex-row justify-content-between align-items-center" style="border-left: 4px solid var(--state-warning); background: #FFFFFF;">
-        <div class="d-flex align-items-center gap-3">
-            <div class="badge-pos badge-warning fs-6 px-3 py-2">
-                <i class="bi bi-lock-fill me-1"></i> Caja Cerrada
+    <div class="card-pos p-3 mb-0" style="border-left: 4px solid var(--state-warning); background: #FFFFFF;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="badge-pos badge-warning fs-6 px-3 py-2">
+                    <i class="bi bi-lock-fill me-1"></i> Caja Cerrada
+                </div>
+                <div>
+                    <span class="text-muted small">No hay turno de caja abierto en este momento. Las ventas se procesarán sin arqueo vinculado.</span>
+                </div>
             </div>
-            <div>
-                <span class="text-muted small">No hay turno de caja abierto en este momento. Las ventas se registrarán sin sesión vinculada.</span>
-            </div>
+            <a href="{% url 'caja_detalle' %}" class="btn-accent btn-sm"><i class="bi bi-key-fill me-1"></i> Abrir Turno de Caja</a>
         </div>
-        <a href="{% url 'caja_detalle' %}" class="btn btn-accent btn-sm"><i class="bi bi-key-fill me-1"></i> Abrir Caja del Día</a>
     </div>
     {% endif %}
 </div>
@@ -56,7 +69,7 @@
 <!-- Tarjetas de Indicadores Principales (Métricas Reales) -->
 <div class="row g-3 mb-4">
     <!-- Ventas del Día -->
-    <div class="col-md-3">
+    <div class="col-xl-3 col-md-6">
         <div class="stat-card accent">
             <div class="stat-icon accent"><i class="bi bi-cash-stack"></i></div>
             <div class="stat-label">Ventas Totales Hoy</div>
@@ -66,7 +79,7 @@
     </div>
 
     <!-- Peluquería Canina -->
-    <div class="col-md-3">
+    <div class="col-xl-3 col-md-6">
         <div class="stat-card info">
             <div class="stat-icon info"><i class="bi bi-scissors"></i></div>
             <div class="stat-label">Peluquería de Mascotas</div>
@@ -76,47 +89,50 @@
     </div>
 
     <!-- Comisiones Peluquero 50% -->
-    <div class="col-md-3">
+    <div class="col-xl-3 col-md-6">
         <div class="stat-card warning">
             <div class="stat-icon warning"><i class="bi bi-person-badge"></i></div>
             <div class="stat-label">Comisiones Peluquero (50%)</div>
             <div class="stat-value">${{ comisiones_peluquero_hoy|floatformat:0 }}</div>
-            <div class="stat-sub" style="color: #B56507 !important;">Adelantos hoy: ${{ adelantos_peluquero_hoy|floatformat:0 }}</div>
+            <div class="stat-sub" style="color: #92400E !important;">Adelantos hoy: ${{ adelantos_peluquero_hoy|floatformat:0 }}</div>
         </div>
     </div>
 
     <!-- Ganancia Real Estimada -->
-    <div class="col-md-3">
+    <div class="col-xl-3 col-md-6">
         <div class="stat-card success">
-            <div class="stat-icon success"><i class="bi bi-trophy"></i></div>
+            <div class="stat-icon success"><i class="bi bi-trophy-fill"></i></div>
             <div class="stat-label">Ganancia Neta Estimada</div>
-            <div class="stat-value">${{ ganancia_estimada_hoy|floatformat:0 }}</div>
-            <div class="stat-sub">Tras costos, comisiones y gastos</div>
+            <div class="stat-value" style="color: var(--brand-emerald);">${{ ganancia_estimada_hoy|floatformat:0 }}</div>
+            <div class="stat-sub">Tras deducir COGS, comisiones y egresos</div>
         </div>
     </div>
 </div>
 
-<!-- Accesos Rápidos Operativos -->
+<!-- Barra de Accesos Rápidos Operativos -->
 <div class="card-pos p-3 mb-4">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <span class="small fw-bold text-muted text-uppercase letter-spacing-1">Accesos Rápidos:</span>
+        <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.8px; font-size: 11px;">
+            <i class="bi bi-lightning-charge-fill me-1" style="color: var(--brand-emerald);"></i>Accesos Rápidos:
+        </span>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{% url 'pos' %}" class="btn btn-sm btn-accent"><i class="bi bi-cart-plus me-1"></i> Nueva Venta</a>
-            <a href="{% url 'adelanto_registrar' %}" class="btn btn-sm btn-outline-pos"><i class="bi bi-cash me-1"></i> Entregar Adelanto</a>
-            <a href="{% url 'cliente_crear' %}" class="btn btn-sm btn-outline-pos"><i class="bi bi-person-plus me-1"></i> Nuevo Cliente</a>
-            <a href="{% url 'mascota_crear' %}" class="btn btn-sm btn-outline-pos"><i class="bi bi-tag me-1"></i> Nueva Mascota</a>
-            <a href="{% url 'egresos_list_create' %}" class="btn btn-sm btn-outline-pos"><i class="bi bi-dash-circle me-1"></i> Registrar Gasto</a>
-            <a href="{% url 'caja_detalle' %}" class="btn btn-sm btn-outline-pos"><i class="bi bi-safe me-1"></i> Control de Caja</a>
+            <a href="{% url 'pos' %}" class="btn-accent btn-sm"><i class="bi bi-cart-plus me-1"></i> Nueva Venta</a>
+            <a href="{% url 'adelanto_registrar' %}" class="btn-outline-pos btn-sm"><i class="bi bi-cash me-1"></i> Entregar Adelanto</a>
+            <a href="{% url 'cliente_crear' %}" class="btn-outline-pos btn-sm"><i class="bi bi-person-plus me-1"></i> Nuevo Cliente</a>
+            <a href="{% url 'mascota_crear' %}" class="btn-outline-pos btn-sm"><i class="bi bi-tag me-1"></i> Nueva Mascota</a>
+            <a href="{% url 'egresos_list_create' %}" class="btn-outline-pos btn-sm"><i class="bi bi-dash-circle me-1"></i> Registrar Gasto</a>
+            <a href="{% url 'caja_detalle' %}" class="btn-outline-pos btn-sm"><i class="bi bi-safe me-1"></i> Control de Caja</a>
         </div>
     </div>
 </div>
 
 <!-- Desglose Gráfico y Económico -->
-<div class="row g-3 mb-4">
-    <div class="col-md-8">
-        <div class="card-pos h-100">
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card-pos h-100 mb-0">
             <div class="card-pos-header">
-                <span><i class="bi bi-bar-chart-line-fill me-2" style="color: var(--brand-primary);"></i>Tendencia Últimos 7 Días (Ventas vs Servicios)</span>
+                <span><i class="bi bi-bar-chart-line-fill me-2" style="color: var(--brand-emerald);"></i>Tendencia de Actividad (Últimos 7 Días)</span>
+                <span class="badge-pos badge-info">Productos vs Peluquería</span>
             </div>
             <div class="card-pos-body">
                 <canvas id="chart7Dias" height="95"></canvas>
@@ -124,27 +140,27 @@
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card-pos h-100">
+    <div class="col-lg-4">
+        <div class="card-pos h-100 mb-0">
             <div class="card-pos-header">
-                <span><i class="bi bi-pie-chart-fill me-2" style="color: var(--state-warning);"></i>Desglose Financiero Hoy</span>
+                <span><i class="bi bi-pie-chart-fill me-2" style="color: var(--brand-emerald);"></i>Desglose Financiero Hoy</span>
             </div>
             <div class="card-pos-body p-3">
                 <ul class="list-group list-group-flush bg-transparent">
                     <li class="list-group-item bg-transparent d-flex justify-content-between px-0 py-2 border-bottom">
-                        <span class="text-muted"><i class="bi bi-bag-check me-2" style="color: var(--brand-primary);"></i>Productos Vendidos:</span>
+                        <span class="text-muted"><i class="bi bi-bag-check me-2" style="color: var(--brand-emerald);"></i>Venta de Productos:</span>
                         <strong>${{ ingresos_productos_hoy|floatformat:0 }}</strong>
                     </li>
                     <li class="list-group-item bg-transparent d-flex justify-content-between px-0 py-2 border-bottom">
-                        <span class="text-muted"><i class="bi bi-box me-2"></i>Costo de Productos:</span>
+                        <span class="text-muted"><i class="bi bi-box me-2"></i>Costo de Mercancía:</span>
                         <span class="text-danger">-${{ ganancia_productos_hoy|floatformat:0 }}</span>
                     </li>
                     <li class="list-group-item bg-transparent d-flex justify-content-between px-0 py-2 border-bottom">
                         <span class="text-muted"><i class="bi bi-scissors me-2" style="color: var(--brand-deep);"></i>Margen Peluquería Negocio:</span>
-                        <strong class="text-success">+${{ parte_negocio_peluqueria_hoy|floatformat:0 }}</strong>
+                        <strong style="color: var(--brand-emerald);">+${{ parte_negocio_peluqueria_hoy|floatformat:0 }}</strong>
                     </li>
                     <li class="list-group-item bg-transparent d-flex justify-content-between px-0 py-2 border-bottom">
-                        <span class="text-muted"><i class="bi bi-people me-2" style="color: var(--state-warning);"></i>Pagos Personal / Nómina:</span>
+                        <span class="text-muted"><i class="bi bi-people me-2" style="color: var(--state-warning);"></i>Pagos Nómina / Ayudantes:</span>
                         <span class="text-danger">-${{ pagos_personal_hoy|floatformat:0 }}</span>
                     </li>
                     <li class="list-group-item bg-transparent d-flex justify-content-between px-0 py-2 border-bottom">
@@ -152,9 +168,9 @@
                         <span class="text-danger">-${{ total_egresos_hoy|floatformat:0 }}</span>
                     </li>
                 </ul>
-                <div class="mt-3 p-3 rounded text-center" style="background: rgba(35, 155, 114, 0.08); border: 1px dashed var(--brand-primary);">
-                    <small class="text-muted d-block font-weight-600">Margen Estimado de la Jornada</small>
-                    <span class="fs-4 fw-bold text-success">${{ ganancia_estimada_hoy|floatformat:0 }} COP</span>
+                <div class="mt-3 p-3 rounded text-center" style="background: rgba(35, 155, 114, 0.08); border: 1px dashed var(--brand-emerald);">
+                    <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 11px;">Utilidad Estimada de la Jornada</small>
+                    <span class="fs-4 fw-bold" style="color: var(--brand-emerald);">${{ ganancia_estimada_hoy|floatformat:0 }} COP</span>
                 </div>
             </div>
         </div>
@@ -162,102 +178,98 @@
 </div>
 
 <!-- Tablas de Actividad Reciente -->
-<div class="row g-3">
+<div class="row g-4">
     <!-- Últimas Ventas -->
-    <div class="col-md-7">
-        <div class="card-pos h-100">
+    <div class="col-lg-7">
+        <div class="card-pos h-100 mb-0">
             <div class="card-pos-header">
                 <span><i class="bi bi-clock-history me-2 text-muted"></i>Últimas Ventas Registradas</span>
                 <a href="{% url 'historial_ventas' %}" class="btn-outline-pos btn-sm">Ver Todas</a>
             </div>
-            <div class="card-pos-body p-0">
-                <div class="table-responsive-pos">
-                    <table class="table table-pos mb-0">
-                        <thead>
-                            <tr>
-                                <th>N° Venta</th>
-                                <th>Hora</th>
-                                <th>Artículos</th>
-                                <th>Método</th>
-                                <th class="text-end">Total</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for v in ultimas_ventas %}
-                            <tr>
-                                <td><span class="badge-pos badge-accent">#{{ v.pk }}</span></td>
-                                <td>{{ v.fecha|date:"H:i" }}</td>
-                                <td>
-                                    {% for d in v.detalles.all %}
-                                        <small class="d-block text-truncate" style="max-width: 180px;">{{ d.cantidad }}x {{ d.nombre_producto|default:d.producto.nombre }}</small>
-                                    {% endfor %}
-                                    {% for s in v.servicios_peluqueria.all %}
-                                        <small class="d-block text-truncate" style="color: var(--brand-deep); max-width: 180px;">
-                                            <i class="bi bi-scissors me-1"></i>{{ s.nombre_servicio }} ({{ s.peluquero.nombre }})
-                                        </small>
-                                    {% endfor %}
-                                </td>
-                                <td>
-                                    <span class="badge-pos {% if v.metodo_pago == 'efectivo' %}badge-success{% elif v.metodo_pago == 'transferencia' %}badge-info{% else %}badge-warning{% endif %}">
-                                        {{ v.get_metodo_pago_display }}
-                                    </span>
-                                </td>
-                                <td class="text-end fw-bold text-dark">${{ v.total_venta|floatformat:0 }}</td>
-                                <td class="text-end">
-                                    <a href="{% url 'venta_detalle' v.pk %}" class="btn btn-sm btn-outline-pos py-0 px-2"><i class="bi bi-eye"></i></a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="6" class="text-center text-muted py-4">No hay ventas registradas hoy.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-responsive-pos">
+                <table class="table-pos">
+                    <thead>
+                        <tr>
+                            <th>N° Venta</th>
+                            <th>Hora</th>
+                            <th>Artículos</th>
+                            <th>Método</th>
+                            <th style="text-align: right;">Total</th>
+                            <th style="text-align: right;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in ultimas_ventas %}
+                        <tr>
+                            <td><span class="badge-pos badge-accent">#{{ v.pk }}</span></td>
+                            <td style="font-size: 12px; color: var(--text-muted);">{{ v.fecha|date:"H:i" }}</td>
+                            <td>
+                                {% for d in v.detalles.all %}
+                                    <small class="d-block text-truncate" style="max-width: 200px;">{{ d.cantidad }}x {{ d.nombre_producto|default:d.producto.nombre }}</small>
+                                {% endfor %}
+                                {% for s in v.servicios_peluqueria.all %}
+                                    <small class="d-block text-truncate" style="color: var(--brand-deep); max-width: 200px;">
+                                        <i class="bi bi-scissors me-1"></i>{{ s.nombre_servicio }} ({{ s.peluquero.nombre }})
+                                    </small>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <span class="badge-pos {% if v.metodo_pago == 'efectivo' %}badge-success{% elif v.metodo_pago == 'transferencia' %}badge-info{% else %}badge-warning{% endif %}">
+                                    {{ v.get_metodo_pago_display }}
+                                </span>
+                            </td>
+                            <td style="text-align: right; font-weight: 800; color: var(--brand-petroleum);">${{ v.total_venta|floatformat:0 }}</td>
+                            <td style="text-align: right;">
+                                <a href="{% url 'venta_detalle' v.pk %}" class="btn-outline-pos py-0 px-2" style="font-size: 12px;" title="Ver detalle"><i class="bi bi-eye"></i></a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No hay ventas registradas hoy.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <!-- Liquidaciones del Peluquero Abiertas -->
-    <div class="col-md-5">
-        <div class="card-pos h-100">
+    <div class="col-lg-5">
+        <div class="card-pos h-100 mb-0">
             <div class="card-pos-header">
                 <span><i class="bi bi-scissors me-2" style="color: var(--state-warning);"></i>Liquidaciones de Peluquería</span>
                 <a href="{% url 'peluqueria_dashboard' %}" class="btn-outline-pos btn-sm">Gestión</a>
             </div>
-            <div class="card-pos-body p-0">
-                <div class="table-responsive-pos">
-                    <table class="table table-pos mb-0">
-                        <thead>
-                            <tr>
-                                <th>Peluquero</th>
-                                <th>Fecha</th>
-                                <th>Estado</th>
-                                <th class="text-end">Saldo</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for l in liquidaciones_abiertas %}
-                            <tr>
-                                <td class="fw-bold" style="color: var(--brand-deep);">{{ l.peluquero.nombre }}</td>
-                                <td>{{ l.fecha_jornada|date:"d/m" }}</td>
-                                <td>
-                                    <span class="badge-pos {% if l.estado == 'liquidada' %}badge-success{% elif l.estado == 'parcial' %}badge-warning{% else %}badge-danger{% endif %}">
-                                        {{ l.get_estado_display }}
-                                    </span>
-                                </td>
-                                <td class="text-end fw-bold" style="color: #B56507;">${{ l.saldo_pendiente|floatformat:0 }}</td>
-                                <td class="text-end">
-                                    <a href="{% url 'liquidacion_jornada' l.peluquero.pk %}" class="btn btn-sm btn-accent py-0 px-2">Liquidar</a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="5" class="text-center text-muted py-4">Todas las comisiones están al día.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-responsive-pos">
+                <table class="table-pos">
+                    <thead>
+                        <tr>
+                            <th>Peluquero</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th style="text-align: right;">Saldo</th>
+                            <th style="text-align: right;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in liquidaciones_abiertas %}
+                        <tr>
+                            <td class="fw-bold" style="color: var(--brand-petroleum);">{{ l.peluquero.nombre }}</td>
+                            <td style="font-size: 12px; color: var(--text-muted);">{{ l.fecha_jornada|date:"d/m" }}</td>
+                            <td>
+                                <span class="badge-pos {% if l.estado == 'liquidada' %}badge-success{% elif l.estado == 'parcial' %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ l.get_estado_display }}
+                                </span>
+                            </td>
+                            <td style="text-align: right; font-weight: 800; color: #92400E;">${{ l.saldo_pendiente|floatformat:0 }}</td>
+                            <td style="text-align: right;">
+                                <a href="{% url 'liquidacion_jornada' l.peluquero.pk %}" class="btn-accent py-0 px-2" style="font-size: 12px;">Liquidar</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Todas las comisiones de peluquería están al día.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -280,24 +292,24 @@
                     label: 'Venta Productos ($)',
                     data: ventasData,
                     backgroundColor: 'rgba(35, 155, 114, 0.85)',
-                    borderRadius: 4
+                    borderRadius: 6
                 },
                 {
                     label: 'Peluquería ($)',
                     data: serviciosData,
                     backgroundColor: 'rgba(23, 59, 77, 0.75)',
-                    borderRadius: 4
+                    borderRadius: 6
                 }
             ]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { labels: { color: '#718096', font: { family: 'Inter', size: 12 } } }
+                legend: { labels: { color: '#64748B', font: { family: 'Inter', size: 12, weight: 600 } } }
             },
             scales: {
-                x: { ticks: { color: '#718096' }, grid: { display: false } },
-                y: { ticks: { color: '#718096' }, grid: { color: '#EDF3F1' } }
+                x: { ticks: { color: '#64748B' }, grid: { display: false } },
+                y: { ticks: { color: '#64748B' }, grid: { color: '#EDF2F0' } }
             }
         }
     });

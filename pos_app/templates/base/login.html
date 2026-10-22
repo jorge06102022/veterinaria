@@ -13,41 +13,42 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   
   :root {
-    --brand-primary: #239B72;
-    --brand-primary-hover: #1e8763;
-    --brand-dark: #176B50;
-    --brand-deep: #173B4D;
-    --brand-accent: #58BFA5;
-    --bg-main: #F5F8F7;
-    --text-dark: #24343D;
-    --text-muted: #718096;
-    --border-subtle: #E2EAE7;
+    --brand-emerald: #239B72;
+    --brand-emerald-hover: #1e8763;
+    --brand-deep: #176B50;
+    --brand-petroleum: #173B4D;
+    --brand-turquoise: #58BFA5;
+    --bg-main: #F4F7F6;
+    --text-dark: #1F2D35;
+    --text-muted: #64748B;
+    --border-subtle: #E2E8E6;
   }
 
   body {
     min-height: 100vh;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: var(--bg-main);
     color: var(--text-dark);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 24px;
+    letter-spacing: -0.01em;
   }
 
   .login-card {
     width: 100%;
-    max-width: 1080px;
-    min-height: 620px;
+    max-width: 1060px;
+    min-height: 630px;
     background: #FFFFFF;
     border-radius: 20px;
-    box-shadow: 0 10px 40px rgba(23, 59, 77, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 16px 48px rgba(23, 59, 77, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
     display: flex;
     overflow: hidden;
     border: 1px solid var(--border-subtle);
   }
 
-  /* ── LADO VISUAL (IZQUIERDA) ── */
+  /* ── LADO VISUAL EDITORIAL (IZQUIERDA) ── */
   .visual-pane {
     flex: 1.15;
     position: relative;
@@ -62,7 +63,7 @@
   .visual-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(145deg, rgba(23, 59, 77, 0.85) 0%, rgba(23, 107, 80, 0.75) 55%, rgba(35, 155, 114, 0.6) 100%);
+    background: linear-gradient(145deg, rgba(23, 59, 77, 0.88) 0%, rgba(23, 107, 80, 0.78) 55%, rgba(35, 155, 114, 0.65) 100%);
     z-index: 1;
   }
 
@@ -78,20 +79,31 @@
   .brand-badge {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    padding: 8px 16px;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    padding: 8px 18px;
     border-radius: 100px;
     width: fit-content;
   }
 
-  .brand-badge i { font-size: 18px; color: #58BFA5; }
-  .brand-badge span { font-size: 14px; font-weight: 700; letter-spacing: 0.3px; color: #FFFFFF; }
+  .brand-paw-img {
+    width: 22px;
+    height: 22px;
+    filter: brightness(0) invert(1);
+  }
+
+  .brand-badge span {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: #FFFFFF;
+  }
 
   .hero-quote {
     max-width: 420px;
+    margin: 36px 0;
   }
 
   .hero-quote h1 {
@@ -103,9 +115,9 @@
   }
 
   .hero-quote p {
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.6;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.92);
   }
 
   .trust-pills {
@@ -118,82 +130,83 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.85);
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
   }
 
   .trust-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #58BFA5;
+    background: var(--brand-turquoise);
   }
 
   /* ── LADO FORMULARIO (DERECHA) ── */
   .form-pane {
     flex: 1;
-    padding: 56px 52px;
+    padding: 52px 48px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: space-between;
     background: #FFFFFF;
   }
 
   .form-header {
-    margin-bottom: 32px;
+    margin-bottom: 28px;
   }
 
   .form-header .app-icon {
     width: 44px;
     height: 44px;
     background: rgba(35, 155, 114, 0.1);
-    color: var(--brand-primary);
+    color: var(--brand-emerald);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    padding: 8px;
     margin-bottom: 16px;
   }
 
   .form-header h2 {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
-    color: var(--brand-deep);
+    color: var(--brand-petroleum);
     letter-spacing: -0.5px;
     margin-bottom: 6px;
   }
 
   .form-header p {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-muted);
   }
 
   .error-alert {
-    background: #FDF2F2;
-    border: 1px solid #F8B4B4;
-    color: #9B1C1C;
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
     padding: 12px 16px;
     border-radius: 10px;
     font-size: 13px;
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
   }
 
   .input-group-custom {
-    margin-bottom: 20px;
+    margin-bottom: 18px;
   }
 
   .input-label {
     display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--brand-deep);
-    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--brand-petroleum);
+    margin-bottom: 7px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
   }
 
   .input-box {
@@ -205,7 +218,7 @@
   .input-box .prefix-icon {
     position: absolute;
     left: 14px;
-    color: #A0AEC0;
+    color: #94A3B8;
     font-size: 16px;
     pointer-events: none;
   }
@@ -224,31 +237,31 @@
 
   .input-box input:focus {
     outline: none;
-    border-color: var(--brand-primary);
-    box-shadow: 0 0 0 3px rgba(35, 155, 114, 0.15);
+    border-color: var(--brand-emerald);
+    box-shadow: 0 0 0 3px rgba(35, 155, 114, 0.16);
   }
 
   .input-box .toggle-pwd {
     position: absolute;
     right: 14px;
-    color: #A0AEC0;
+    color: #94A3B8;
     font-size: 16px;
     cursor: pointer;
     transition: color 0.2s;
   }
 
   .input-box .toggle-pwd:hover {
-    color: var(--brand-deep);
+    color: var(--brand-petroleum);
   }
 
   .btn-submit {
     width: 100%;
-    padding: 14px;
-    background: var(--brand-primary);
+    padding: 13px;
+    background: var(--brand-emerald);
     color: #FFFFFF;
     border: none;
     border-radius: 10px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     display: flex;
@@ -256,34 +269,51 @@
     justify-content: center;
     gap: 8px;
     margin-top: 10px;
-    box-shadow: 0 4px 12px rgba(35, 155, 114, 0.25);
+    box-shadow: 0 4px 14px rgba(35, 155, 114, 0.25);
     transition: all 0.2s;
   }
 
   .btn-submit:hover {
-    background: var(--brand-primary-hover);
-    box-shadow: 0 6px 16px rgba(35, 155, 114, 0.35);
+    background: var(--brand-emerald-hover);
+    box-shadow: 0 6px 18px rgba(35, 155, 114, 0.35);
     transform: translateY(-1px);
   }
 
-  .btn-submit:active {
-    transform: translateY(0);
-  }
-
-  .form-footer {
-    margin-top: 32px;
-    text-align: center;
+  /* Footer con Seguridad y Firma Alpha Web Studio */
+  .login-footer-zone {
+    margin-top: 28px;
     border-top: 1px solid var(--border-subtle);
-    padding-top: 20px;
+    padding-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
   }
 
-  .form-footer small {
-    font-size: 12px;
+  .security-badge {
+    font-size: 11px;
     color: var(--text-muted);
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 6px;
+  }
+
+  .alpha-signature-login {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: #64748B;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #F8FAF9;
+    border: 1px solid #EAEFEF;
+  }
+
+  .alpha-signature-login strong {
+    color: var(--brand-petroleum);
+    font-weight: 700;
   }
 
   @media (max-width: 900px) {
@@ -298,71 +328,82 @@
 <body>
 
 <div class="login-card">
-  <!-- Zona Visual de Mascotas -->
+  <!-- Zona Visual de Mascotas con Huella de Marca -->
   <div class="visual-pane">
     <div class="visual-overlay"></div>
     <div class="visual-content">
       <div class="brand-badge">
-        <i class="bi bi-heart-pulse-fill"></i>
+        <img src="{% static 'img/petpos-paw.svg' %}" alt="Huella PetPOS Pro" class="brand-paw-img">
         <span>PetPOS Pro</span>
       </div>
 
       <div class="hero-quote">
         <h1>Cuidamos sus huellas, organizamos tu negocio.</h1>
-        <p>Plataforma integral para peluquerías caninas y tiendas de productos para animales. Ventas, caja, inventario y comisiones en un solo lugar.</p>
+        <p>Solución comercial de alta precisión para peluquerías de mascotas y tiendas especializadas. Ventas, inventario, liquidaciones y caja en tiempo real.</p>
       </div>
 
       <div class="trust-pills">
-        <div class="trust-item"><span class="trust-dot"></span> Control de Caja & Bancos</div>
-        <div class="trust-item"><span class="trust-dot"></span> Comisiones de Peluquería 50%</div>
-        <div class="trust-item"><span class="trust-dot"></span> Lector de Código USB</div>
+        <div class="trust-item"><span class="trust-dot"></span> Arqueo Ciego & Caja</div>
+        <div class="trust-item"><span class="trust-dot"></span> Comisiones Peluquero (50%)</div>
+        <div class="trust-item"><span class="trust-dot"></span> Lector de Código de Barras</div>
       </div>
     </div>
   </div>
 
   <!-- Zona de Acceso del Administrador -->
   <div class="form-pane">
-    <div class="form-header">
-      <div class="app-icon"><i class="bi bi-shield-lock-fill"></i></div>
-      <h2>Bienvenido a PetPOS Pro</h2>
-      <p>Ingresa tus credenciales para administrar la tienda y peluquería.</p>
-    </div>
-
-    {% if form.errors %}
-    <div class="error-alert">
-      <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-      <div><strong>Usuario o contraseña incorrectos.</strong> Verifica tus datos e intenta nuevamente.</div>
-    </div>
-    {% endif %}
-
-    <form method="post" id="loginForm">
-      {% csrf_token %}
-
-      <div class="input-group-custom">
-        <label class="input-label" for="id_username">Usuario Administrador</label>
-        <div class="input-box">
-          <i class="bi bi-person-fill prefix-icon"></i>
-          <input type="text" name="username" id="id_username" placeholder="admin" required autofocus autocomplete="username">
+    <div>
+      <div class="form-header">
+        <div class="app-icon">
+          <img src="{% static 'img/petpos-paw.svg' %}" alt="PetPOS Pro" width="28" height="28">
         </div>
+        <h2>Bienvenido a PetPOS Pro</h2>
+        <p>Ingresa tus credenciales para acceder al panel de administración.</p>
       </div>
 
-      <div class="input-group-custom">
-        <label class="input-label" for="id_password">Contraseña</label>
-        <div class="input-box">
-          <i class="bi bi-lock-fill prefix-icon"></i>
-          <input type="password" name="password" id="id_password" placeholder="••••••••" required autocomplete="current-password">
-          <i class="bi bi-eye toggle-pwd" id="pwdToggle" title="Mostrar/ocultar contraseña"></i>
-        </div>
+      {% if form.errors %}
+      <div class="error-alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div><strong>Acceso denegado.</strong> Usuario o contraseña incorrectos.</div>
       </div>
+      {% endif %}
 
-      <button type="submit" class="btn-submit" id="btnSubmit">
-        <span>Iniciar Sesión</span>
-        <i class="bi bi-arrow-right"></i>
-      </button>
-    </form>
+      <form method="post" id="loginForm">
+        {% csrf_token %}
 
-    <div class="form-footer">
-      <small><i class="bi bi-shield-check text-success"></i> Acceso seguro cifrado &bull; PetPOS Pro v2.0</small>
+        <div class="input-group-custom">
+          <label class="input-label" for="id_username">Usuario Administrador</label>
+          <div class="input-box">
+            <i class="bi bi-person-fill prefix-icon"></i>
+            <input type="text" name="username" id="id_username" placeholder="admin" required autofocus autocomplete="username">
+          </div>
+        </div>
+
+        <div class="input-group-custom">
+          <label class="input-label" for="id_password">Contraseña</label>
+          <div class="input-box">
+            <i class="bi bi-lock-fill prefix-icon"></i>
+            <input type="password" name="password" id="id_password" placeholder="••••••••" required autocomplete="current-password">
+            <i class="bi bi-eye toggle-pwd" id="pwdToggle" title="Mostrar/ocultar contraseña"></i>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btnSubmit">
+          <span>Ingresar al Sistema</span>
+          <i class="bi bi-arrow-right"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- Pie con Seguridad y Firma de Alpha Web Studio -->
+    <div class="login-footer-zone">
+      <div class="security-badge">
+        <i class="bi bi-shield-check text-success"></i> Acceso seguro cifrado &bull; PetPOS Pro v2.2
+      </div>
+      <div class="alpha-signature-login">
+        <img src="{% static 'img/alpha-logo.svg' %}" alt="Alpha Web Studio" width="14" height="14">
+        <span>Desarrollado con tecnología por <strong>Alpha Web Studio</strong></span>
+      </div>
     </div>
   </div>
 </div>

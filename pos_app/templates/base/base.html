@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}PetPOS Pro — Sistema de Gestión Veterinaria & Peluquería{% endblock %}</title>
+    <title>{% block title %}PetPOS Pro — Gestión Veterinaria & Peluquería{% endblock %}</title>
     <!-- Google Fonts Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,13 +35,13 @@
             font-size: 13px;
             display: flex;
             align-items: center;
-            border-left: 4px solid var(--brand-primary);
+            border-left: 4px solid var(--brand-emerald);
             color: var(--text-main);
             cursor: pointer;
         }
         .alert-pos.error { border-left-color: var(--state-danger); }
         .alert-pos.warning { border-left-color: var(--state-warning); }
-        .alert-pos.info { border-left-color: var(--brand-deep); }
+        .alert-pos.info { border-left-color: var(--brand-petroleum); }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -70,10 +70,12 @@
 </script>
 {% endif %}
 
-<!-- Sidebar Profesional (235px) -->
+<!-- Sidebar Profesional PetPOS Pro (240px) -->
 <aside class="sidebar">
     <div class="sidebar-brand">
-        <div class="brand-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+        <div class="brand-icon">
+            <img src="{% static 'img/petpos-paw.svg' %}" alt="PetPOS Pro" width="24" height="24" style="filter: brightness(0) invert(1);">
+        </div>
         <div>
             <div class="brand-title">PetPOS Pro</div>
             <div class="brand-sub">Peluquería & Pet Shop</div>
@@ -120,6 +122,7 @@
         </a>
     </nav>
 
+    <!-- Footer del Sidebar con Usuario y Firma Estratégica Alpha Web Studio -->
     <div class="sidebar-footer">
         <div class="user-badge">
             <div class="user-avatar">{{ request.user.username|first|upper }}</div>
@@ -133,6 +136,18 @@
                     <i class="bi bi-box-arrow-right fs-6"></i>
                 </button>
             </form>
+        </div>
+
+        <!-- Firma Profesional de Desarrollador: Alpha Web Studio -->
+        <div class="developer-signature" title="Desarrollado por Alpha Web Studio — Software & Tecnología">
+            <div class="dev-logo">
+                <img src="{% static 'img/alpha-logo.svg' %}" alt="Alpha Web Studio" width="20" height="20">
+            </div>
+            <div class="dev-text">
+                <div class="dev-pre">Desarrollado por</div>
+                <div class="dev-brand">Alpha Web Studio</div>
+                <div class="dev-tag">Software &bull; Diseño &bull; Tecnología</div>
+            </div>
         </div>
     </div>
 </aside>
