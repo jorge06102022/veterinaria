@@ -21,76 +21,82 @@
   body {
     min-height: 100vh;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    /* login 1: Fondo de toda la pantalla (100% viewport) */
+    /* login 1: Fondo de pantalla completa */
     background: url("{% static 'img/login_1.jpg' %}") center center / cover no-repeat fixed;
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 20px;
+    justify-content: flex-start; /* Tarjeta alineada a la izquierda */
+    padding: 30px 0 30px 80px;  /* Margen amplio a la izquierda */
     position: relative;
     overflow-x: hidden;
   }
 
-  /* Capa de contraste cinematográfica suave */
+  /* Capa de contraste ambiental suave para destacar el fondo */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background: rgba(10, 20, 36, 0.45);
-    backdrop-filter: blur(2px);
+    background: rgba(10, 20, 36, 0.35);
+    backdrop-filter: blur(1.5px);
     z-index: 1;
     pointer-events: none;
   }
 
-  /* ── TARJETA COMPACTA BASADA EN LOGIN 2 ── */
-  .login-card-compact {
+  /* ── TARJETA DE LOGIN: MÁS DELGADA, MÁS ALTA, ALINEADA A LA IZQUIERDA ── */
+  .login-card-left {
     position: relative;
     z-index: 2;
-    width: 100%;
-    max-width: 440px;
-    background: url("{% static 'img/login_2.jpg' %}") center top / cover no-repeat;
-    border-radius: 20px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.25);
+    width: 360px;               /* Más delgada */
+    min-height: 580px;          /* Más alta */
+    /* login 2: Fondo de la tarjeta */
+    background: url("{% static 'img/login_2.jpg' %}") center center / cover no-repeat;
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.3);
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    animation: fadeIn 0.3s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  /* Capa interna semi-translúcida para garantizar legibilidad de campos sin tapar la tarjeta */
-  .card-inner-glass {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(180deg, rgba(23, 59, 77, 0.72) 0%, rgba(15, 35, 46, 0.88) 40%, rgba(12, 28, 38, 0.94) 100%);
-    backdrop-filter: blur(10px);
-    padding: 34px 32px 30px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: slideInLeft 0.35s ease-out;
     display: flex;
     flex-direction: column;
   }
 
-  /* Logo e Isotipo Compactos */
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Capa superpuesta sobre login 2 para que los campos colocados encima tengan perfecta legibilidad */
+  .card-inner-overlay {
+    width: 100%;
+    height: 100%;
+    min-height: 580px;
+    /* Degradado sutil para dejar ver la imagen de las mascotas abajo mientras los campos arriba son nítidos */
+    background: linear-gradient(180deg, rgba(16, 40, 52, 0.88) 0%, rgba(20, 50, 65, 0.72) 50%, rgba(12, 28, 38, 0.6) 100%);
+    backdrop-filter: blur(3px);
+    padding: 38px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* Logo compacto en la parte superior */
   .brand-header {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin-bottom: 22px;
+    margin-bottom: 24px;
   }
 
   .brand-icon {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     background: var(--brand-emerald);
-    border-radius: 9px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 6px;
-    box-shadow: 0 2px 8px rgba(35, 155, 114, 0.4);
+    box-shadow: 0 2px 8px rgba(35, 155, 114, 0.45);
   }
 
   .brand-icon img {
@@ -100,16 +106,17 @@
   }
 
   .brand-title {
-    font-size: 20px;
+    font-size: 21px;
     font-weight: 800;
     color: #FFFFFF;
     letter-spacing: -0.4px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   }
 
   /* Alerta de Error */
   .error-alert {
-    background: rgba(220, 38, 38, 0.18);
-    border: 1px solid rgba(248, 113, 113, 0.4);
+    background: rgba(220, 38, 38, 0.25);
+    border: 1px solid rgba(248, 113, 113, 0.5);
     color: #FECACA;
     padding: 9px 12px;
     border-radius: 8px;
@@ -118,21 +125,23 @@
     align-items: center;
     gap: 8px;
     margin-bottom: 16px;
+    backdrop-filter: blur(4px);
   }
 
-  /* Campos del Formulario */
+  /* ── CAMPOS DE USUARIO Y CONTRASEÑA ARRIBA DE LA IMAGEN ── */
   .input-group-custom {
-    margin-bottom: 16px;
+    margin-bottom: 18px;
   }
 
   .input-label {
     display: block;
     font-size: 11px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.85);
+    color: #FFFFFF;
     margin-bottom: 6px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
   }
 
   .input-box {
@@ -144,7 +153,7 @@
   .input-box .prefix-icon {
     position: absolute;
     left: 14px;
-    color: #94A3B8;
+    color: #64748B;
     font-size: 15px;
     pointer-events: none;
   }
@@ -154,11 +163,12 @@
     padding: 12px 38px 12px 38px;
     font-size: 14px;
     font-family: inherit;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 255, 255, 0.95);
     color: #173B4D;
-    font-weight: 500;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition: all 0.2s;
   }
 
@@ -166,7 +176,7 @@
     outline: none;
     background: #FFFFFF;
     border-color: var(--brand-emerald);
-    box-shadow: 0 0 0 3px rgba(35, 155, 114, 0.35);
+    box-shadow: 0 0 0 3px rgba(35, 155, 114, 0.45);
   }
 
   .input-box .toggle-pwd {
@@ -185,7 +195,7 @@
   /* Botón de Inicio de Sesión */
   .btn-submit {
     width: 100%;
-    padding: 12px;
+    padding: 13px;
     background: var(--brand-emerald);
     color: #FFFFFF;
     border: none;
@@ -198,13 +208,13 @@
     justify-content: center;
     gap: 8px;
     margin-top: 10px;
-    box-shadow: 0 4px 14px rgba(35, 155, 114, 0.35);
+    box-shadow: 0 4px 16px rgba(35, 155, 114, 0.45);
     transition: all 0.2s;
   }
 
   .btn-submit:hover {
     background: var(--brand-emerald-hover);
-    box-shadow: 0 6px 18px rgba(35, 155, 114, 0.45);
+    box-shadow: 0 6px 20px rgba(35, 155, 114, 0.55);
     transform: translateY(-1px);
   }
 
@@ -216,76 +226,92 @@
   .signature-compact {
     margin-top: 20px;
     padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   }
 
   .signature-compact strong {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.95);
     font-weight: 600;
   }
 
-  @media (max-width: 480px) {
-    .login-card-compact { max-width: 100%; }
-    .card-inner-glass { padding: 28px 22px 24px; }
+  /* Responsive: En pantallas pequeñas se centra con margen normal */
+  @media (max-width: 768px) {
+    body {
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-card-left {
+      width: 100%;
+      max-width: 360px;
+      min-height: 540px;
+    }
+    .card-inner-overlay {
+      min-height: 540px;
+      padding: 30px 22px 24px;
+    }
   }
 </style>
 </head>
 <body>
 
-<div class="login-card-compact">
-  <div class="card-inner-glass">
-    <!-- Logotipo compacto PetPOS Pro -->
-    <div class="brand-header">
-      <div class="brand-icon">
-        <img src="{% static 'img/petpos-paw.svg' %}" alt="PetPOS Pro">
-      </div>
-      <div class="brand-title">PetPOS Pro</div>
-    </div>
-
-    <!-- Mensaje de Error en caso de credenciales incorrectas -->
-    {% if form.errors %}
-    <div class="error-alert">
-      <i class="bi bi-exclamation-triangle-fill"></i>
-      <span>Usuario o contraseña incorrectos.</span>
-    </div>
-    {% endif %}
-
-    <!-- Formulario de Acceso Funcional -->
-    <form method="post" id="loginForm">
-      {% csrf_token %}
-
-      <div class="input-group-custom">
-        <label class="input-label" for="id_username">Usuario</label>
-        <div class="input-box">
-          <i class="bi bi-person-fill prefix-icon"></i>
-          <input type="text" name="username" id="id_username" placeholder="Usuario" required autofocus autocomplete="username">
+<!-- Tarjeta de Login a la izquierda, más alta y más delgada con login 2 de fondo -->
+<div class="login-card-left">
+  <div class="card-inner-overlay">
+    <div>
+      <!-- Logotipo compacto PetPOS Pro -->
+      <div class="brand-header">
+        <div class="brand-icon">
+          <img src="{% static 'img/petpos-paw.svg' %}" alt="PetPOS Pro">
         </div>
+        <div class="brand-title">PetPOS Pro</div>
       </div>
 
-      <div class="input-group-custom">
-        <label class="input-label" for="id_password">Contraseña</label>
-        <div class="input-box">
-          <i class="bi bi-lock-fill prefix-icon"></i>
-          <input type="password" name="password" id="id_password" placeholder="Contraseña" required autocomplete="current-password">
-          <i class="bi bi-eye toggle-pwd" id="pwdToggle" title="Mostrar/ocultar contraseña"></i>
+      <!-- Alerta de Error si las credenciales fallan -->
+      {% if form.errors %}
+      <div class="error-alert">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>Usuario o contraseña incorrectos.</span>
+      </div>
+      {% endif %}
+
+      <!-- Campos de acceso arriba de la imagen de fondo -->
+      <form method="post" id="loginForm">
+        {% csrf_token %}
+
+        <div class="input-group-custom">
+          <label class="input-label" for="id_username">Usuario</label>
+          <div class="input-box">
+            <i class="bi bi-person-fill prefix-icon"></i>
+            <input type="text" name="username" id="id_username" placeholder="Usuario" required autofocus autocomplete="username">
+          </div>
         </div>
-      </div>
 
-      <button type="submit" class="btn-submit" id="btnSubmit">
-        <span>Iniciar Sesión</span>
-        <i class="bi bi-arrow-right"></i>
-      </button>
-    </form>
+        <div class="input-group-custom">
+          <label class="input-label" for="id_password">Contraseña</label>
+          <div class="input-box">
+            <i class="bi bi-lock-fill prefix-icon"></i>
+            <input type="password" name="password" id="id_password" placeholder="Contraseña" required autocomplete="current-password">
+            <i class="bi bi-eye toggle-pwd" id="pwdToggle" title="Mostrar/ocultar contraseña"></i>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btnSubmit">
+          <span>Iniciar Sesión</span>
+          <i class="bi bi-arrow-right"></i>
+        </button>
+      </form>
+    </div>
 
     <!-- Firma discreta Alpha Web Studio -->
     <div class="signature-compact">
-      <img src="{% static 'img/alpha-logo.svg' %}" alt="Alpha Web Studio" width="12" height="12" style="opacity: 0.7;">
+      <img src="{% static 'img/alpha-logo.svg' %}" alt="Alpha Web Studio" width="12" height="12" style="opacity: 0.85;">
       <span>Desarrollado por <strong>Alpha Web Studio</strong></span>
     </div>
   </div>
@@ -302,7 +328,7 @@
     pwdToggle.className = isPassword ? 'bi bi-eye-slash toggle-pwd' : 'bi bi-eye toggle-pwd';
   });
 
-  // Indicador de carga en envío de credenciales
+  // Indicador de carga al enviar credenciales
   document.getElementById('loginForm').addEventListener('submit', () => {
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true;
