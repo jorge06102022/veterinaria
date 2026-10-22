@@ -216,3 +216,71 @@ class CierreCajaForm(forms.Form):
         required=False, label="Observaciones de Cierre",
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Notas sobre diferencias o justificaciones'})
     )
+
+
+class CitaPeluqueriaForm(forms.ModelForm):
+    """Formulario para agendar y editar citas de peluquería canina."""
+    class Meta:
+        from .models import CitaPeluqueria
+        model = CitaPeluqueria
+        fields = ['cliente', 'mascota', 'servicio', 'peluquero', 'fecha_cita', 'hora_inicio', 'duracion_minutos', 'estado', 'observaciones']
+        widgets = {
+            'cliente': forms.Select(attrs={'class': 'form-select', 'id': 'selectClienteCita'}),
+            'mascota': forms.Select(attrs={'class': 'form-select', 'id': 'selectMascotaCita'}),
+            'servicio': forms.Select(attrs={'class': 'form-select'}),
+            'peluquero': forms.Select(attrs={'class': 'form-select'}),
+            'fecha_cita': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'hora_inicio': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'duracion_minutos': forms.NumberInput(attrs={'class': 'form-control', 'min': '15', 'step': '15'}),
+            'estado': forms.Select(attrs={'class': 'form-select'}),
+            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Particularidades del corte o mascota...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['peluquero'].queryset = Trabajador.objects.filter(activo=True, rol='peluquero')
+        self.fields['servicio'].queryset = ServicioPeluqueria.objects.filter(activo=True)
+        self.fields['peluquero'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cliente = cleaned_data.get('cliente')
+        mascota = cleaned_data.get('mascota')
+        peluquero = cleaned_data.get('peluquero')
+        fecha = cleaned_data.get('fecha_cita')
+        hora = cleaned_data.get('hora_inicio')
+        duracion = cleaned_data.get('duracion_minutos') or 60
+        estado = cleaned_data.get('estado')
+
+        # Validar coherencia cliente - mascota
+        if cliente and mascota and mascota.cliente != cliente:
+            raise forms.ValidationError(f"La mascota '{mascota.nombre}' no pertenece al cliente '{cliente.nombre}'.")
+
+        # Validar solapamiento de horarios para un mismo peluquero en citas no canceladas
+        if peluquero and fecha and hora and estado != 'cancelada':
+            from datetime import datetime, timedelta
+            from .models import CitaPeluqueria
+
+            inicio_dt = datetime.combine(fecha, hora)
+            fin_dt = inicio_dt + timedelta(minutes=duracion)
+
+            # Buscar otras citas activas en la misma fecha para el mismo peluquero
+            otras_citas = CitaPeluqueria.objects.filter(
+                peluquero=peluquero,
+                fecha_cita=fecha
+            ).exclude(estado='cancelada')
+
+            if self.instance.pk:
+                otras_citas = otras_citas.exclude(pk=self.instance.pk)
+
+            for cita in otras_citas:
+                c_inicio = datetime.combine(cita.fecha_cita, cita.hora_inicio)
+                c_fin = c_inicio + timedelta(minutes=cita.duracion_minutos)
+                # Detección de solapamiento
+                if (inicio_dt < c_fin) and (fin_dt > c_inicio):
+                    raise forms.ValidationError(
+                        f"El peluquero '{peluquero.nombre}' ya tiene la cita #{cita.pk} ({cita.mascota.nombre}) agendada de "
+                        f"{cita.hora_inicio.strftime('%H:%M')} a {c_fin.strftime('%H:%M')}. Elija otro horario o estilista."
+                    )
+
+        return cleaned_data

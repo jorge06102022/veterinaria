@@ -1,0 +1,130 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Compra #{{ compra.pk }} — PetPOS Pro{% endblock %}
+{% block page_title %}Factura de Compra #{{ compra.pk }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9 col-12">
+        <!-- Cabecera de Acciones -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <a href="{% url 'compras_list' %}" class="btn-outline-pos" title="Volver al historial">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <h5 class="fw-bold mb-0" style="color: var(--brand-deep);">Factura de Compra #{{ compra.pk }}</h5>
+                    <small class="text-muted">{{ compra.fecha|date:"d/m/Y H:i" }}</small>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'compra_registrar' %}" class="btn-accent">
+                    <i class="bi bi-cart-plus me-1"></i> Nueva Compra
+                </a>
+            </div>
+        </div>
+
+        <!-- Ficha Resumen de la Compra -->
+        <div class="card-pos mb-4">
+            <div class="card-pos-header">
+                <span><i class="bi bi-receipt me-2" style="color: var(--brand-emerald);"></i>Datos de Factura y Proveedor</span>
+                <span class="badge-pos {% if compra.estado == 'recibida_pagada' %}badge-success{% else %}badge-warning{% endif %}">
+                    {{ compra.get_estado_display }}
+                </span>
+            </div>
+            <div class="card-pos-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-4 col-sm-6">
+                        <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Proveedor</small>
+                        <a href="{% url 'proveedor_detalle' compra.proveedor.pk %}" style="color: var(--brand-deep); font-weight: 700; text-decoration: none; font-size: 14px;">
+                            <i class="bi bi-building me-1 text-muted"></i>{{ compra.proveedor.nombre }}
+                        </a>
+                        <small class="text-muted d-block" style="font-size: 11px;">NIT: {{ compra.proveedor.nit|default:"Sin registrar" }}</small>
+                    </div>
+
+                    <div class="col-md-3 col-sm-6">
+                        <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">N° Factura Proveedor</small>
+                        <span style="font-family: monospace; font-weight: 600; color: var(--text-main); font-size: 13px;">
+                            {{ compra.numero_factura_proveedor|default:"—" }}
+                        </span>
+                    </div>
+
+                    <div class="col-md-3 col-sm-6">
+                        <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Método de Pago</small>
+                        <span class="badge-pos badge-info mt-1">
+                            {{ compra.get_metodo_pago_display }}
+                        </span>
+                    </div>
+
+                    <div class="col-md-2 col-sm-6 text-sm-end">
+                        <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Total Factura</small>
+                        <span class="fs-5 fw-bold" style="color: var(--brand-deep);">${{ compra.total|floatformat:0 }}</span>
+                    </div>
+                </div>
+
+                {% if compra.observaciones %}
+                <div class="mt-3 pt-3 border-top" style="border-color: var(--border-subtle) !important;">
+                    <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px;">Observaciones:</small>
+                    <p class="text-muted mb-0" style="font-size: 12px;">{{ compra.observaciones }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tabla de Ítems / Productos Comprados -->
+        <div class="card-pos">
+            <div class="card-pos-header">
+                <span><i class="bi bi-boxes me-2" style="color: var(--brand-emerald);"></i>Productos Ingresados al Inventario</span>
+                <span class="badge-pos badge-info">{{ detalles|length }} producto(s)</span>
+            </div>
+            <div class="table-responsive-pos">
+                <table class="table-pos">
+                    <thead>
+                        <tr>
+                            <th>Código / SKU</th>
+                            <th>Producto</th>
+                            <th style="text-align: center;">Cantidad</th>
+                            <th style="text-align: right;">Costo Unitario</th>
+                            <th style="text-align: right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in detalles %}
+                        <tr>
+                            <td><span class="badge-pos badge-info">{{ d.producto.sku }}</span></td>
+                            <td>
+                                <a href="{% url 'producto_detalle' d.producto.pk %}" style="color: var(--brand-deep); font-weight: 700; text-decoration: none;">
+                                    {{ d.producto.nombre }}
+                                </a>
+                            </td>
+                            <td style="text-align: center; font-weight: 700; color: var(--brand-emerald);">
+                                +{{ d.cantidad }}
+                            </td>
+                            <td style="text-align: right; color: var(--text-muted);">
+                                ${{ d.costo_unitario|floatformat:0 }}
+                            </td>
+                            <td style="text-align: right; font-weight: 800; color: var(--brand-deep);">
+                                ${{ d.subtotal|floatformat:0 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                                No hay ítems detallados para esta compra.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="border-top" style="border-color: var(--border-color) !important;">
+                            <td colspan="4" style="text-align: right; font-weight: 700; color: var(--brand-petroleum);">TOTAL DE LA FACTURA:</td>
+                            <td style="text-align: right; font-weight: 800; font-size: 16px; color: var(--brand-deep);">${{ compra.total|floatformat:0 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

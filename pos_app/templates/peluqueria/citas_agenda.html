@@ -1,0 +1,243 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Agenda de Citas — PetPOS Pro{% endblock %}
+{% block page_title %}Agenda de Peluquería & Citas{% endblock %}
+
+{% block content %}
+<!-- Cabecera de Agenda -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h5 class="fw-bold mb-1" style="color: var(--brand-deep);">Agenda & Turnos de Peluquería</h5>
+        <small class="text-muted">Gestión de citas programadas, control de solapamiento de horarios y atención de mascotas.</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'peluqueria_dashboard' %}" class="btn-outline-pos">
+            <i class="bi bi-scissors me-1"></i> Dashboard Peluquería
+        </a>
+        <a href="{% url 'cita_crear' %}" class="btn-accent" id="btnNuevaCita">
+            <i class="bi bi-calendar-plus me-1"></i> Agendar Nueva Cita
+        </a>
+    </div>
+</div>
+
+<!-- Tarjetas Resumen de Citas -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-sm-6">
+        <div class="stat-card accent">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="stat-label mb-0">Citas para Hoy</span>
+                <div class="stat-icon accent m-0" style="width: 36px; height: 36px; font-size: 16px;">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+            </div>
+            <div class="stat-value" style="font-size: 24px;">{{ citas_hoy_count }}</div>
+            <div class="stat-sub"><i class="bi bi-clock"></i> Fecha: {{ hoy|date:"d/m/Y" }}</div>
+        </div>
+    </div>
+
+    <div class="col-md-4 col-sm-6">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="stat-label mb-0">Pendientes / Confirmadas</span>
+                <div class="stat-icon warning m-0" style="width: 36px; height: 36px; font-size: 16px;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+            <div class="stat-value" style="font-size: 24px; color: var(--state-warning);">{{ citas_pendientes_count }}</div>
+            <div class="stat-sub"><i class="bi bi-info-circle"></i> Próximas por atender</div>
+        </div>
+    </div>
+
+    <div class="col-md-4 col-sm-12">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="stat-label mb-0">Peluqueros Disponibles</span>
+                <div class="stat-icon success m-0" style="width: 36px; height: 36px; font-size: 16px;">
+                    <i class="bi bi-person-hearts"></i>
+                </div>
+            </div>
+            <div class="stat-value" style="font-size: 24px; color: var(--brand-deep);">{{ peluqueros|length }}</div>
+            <div class="stat-sub"><i class="bi bi-check-circle"></i> Estilistas activos</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros de Agenda -->
+<div class="card-pos mb-4">
+    <div class="card-pos-body py-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-3 col-12">
+                <label class="form-label mb-1" style="font-size: 11px; font-weight: 600;">Fecha de Cita</label>
+                <input type="date" name="fecha" value="{{ fecha_sel }}" class="form-control form-control-sm" style="border-color: var(--border-color);">
+            </div>
+            <div class="col-md-3 col-6">
+                <label class="form-label mb-1" style="font-size: 11px; font-weight: 600;">Peluquero</label>
+                <select name="peluquero" class="form-select form-select-sm" style="border-color: var(--border-color);">
+                    <option value="">Todos los peluqueros</option>
+                    {% for p in peluqueros %}
+                    <option value="{{ p.pk }}" {% if peluquero_sel == p.pk %}selected{% endif %}>{{ p.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 col-6">
+                <label class="form-label mb-1" style="font-size: 11px; font-weight: 600;">Estado</label>
+                <select name="estado" class="form-select form-select-sm" style="border-color: var(--border-color);">
+                    <option value="">Todos los estados</option>
+                    <option value="pendiente" {% if estado_sel == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                    <option value="confirmada" {% if estado_sel == 'confirmada' %}selected{% endif %}>Confirmada</option>
+                    <option value="en_proceso" {% if estado_sel == 'en_proceso' %}selected{% endif %}>En Proceso</option>
+                    <option value="completada" {% if estado_sel == 'completada' %}selected{% endif %}>Completada</option>
+                    <option value="cancelada" {% if estado_sel == 'cancelada' %}selected{% endif %}>Cancelada</option>
+                </select>
+            </div>
+            <div class="col-md-3 col-12 d-flex align-items-end gap-2 pt-2 pt-md-0">
+                <button type="submit" class="btn-accent flex-grow-1" style="padding: 6px 12px; font-size: 12px;">
+                    <i class="bi bi-funnel-fill me-1"></i> Filtrar
+                </button>
+                {% if fecha_sel or peluquero_sel or estado_sel %}
+                <a href="{% url 'citas_agenda' %}" class="btn-outline-pos" style="padding: 6px 10px; font-size: 12px;" title="Limpiar filtros">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Citas Agendadas -->
+<div class="card-pos">
+    <div class="card-pos-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-calendar3 me-1" style="color: var(--brand-emerald);"></i>
+            <span>Listado de Citas Programadas</span>
+            <span class="badge-pos badge-info">{{ citas|length }}</span>
+        </div>
+    </div>
+    <div class="table-responsive-pos">
+        <table class="table-pos">
+            <thead>
+                <tr>
+                    <th>Fecha & Hora</th>
+                    <th>Mascota & Propietario</th>
+                    <th>Servicio Solicitado</th>
+                    <th>Peluquero Asignado</th>
+                    <th>Duración Estimada</th>
+                    <th style="text-align: center;">Estado</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in citas %}
+                <tr>
+                    <!-- Fecha y Hora -->
+                    <td>
+                        <div class="fw-bold" style="color: var(--brand-deep); font-size: 13px;">
+                            <i class="bi bi-clock me-1 text-muted"></i>{{ c.hora_inicio|time:"H:i" }}
+                        </div>
+                        <small class="text-muted" style="font-size: 11px;">{{ c.fecha_cita|date:"d/m/Y" }}</small>
+                    </td>
+
+                    <!-- Mascota y Propietario -->
+                    <td>
+                        <div class="fw-bold" style="color: var(--brand-petroleum);">
+                            <i class="bi bi-heart-pulse-fill me-1" style="color: var(--brand-emerald);"></i>{{ c.mascota.nombre }}
+                            <small class="text-muted font-normal">({{ c.mascota.get_especie_display|default:c.mascota.especie }})</small>
+                        </div>
+                        <small class="text-muted d-block">
+                            <i class="bi bi-person me-1"></i>{{ c.cliente.nombre }}
+                            {% if c.cliente.telefono %}&bull; <a href="https://wa.me/{{ c.cliente.telefono }}" target="_blank" class="text-success text-decoration-none"><i class="bi bi-whatsapp"></i></a>{% endif %}
+                        </small>
+                    </td>
+
+                    <!-- Servicio -->
+                    <td>
+                        <span class="badge-pos badge-info">{{ c.servicio.nombre }}</span>
+                        {% if c.observaciones %}
+                        <small class="text-muted d-block mt-1 text-truncate" style="max-width: 180px;" title="{{ c.observaciones }}">
+                            <i class="bi bi-chat-text me-1"></i>{{ c.observaciones }}
+                        </small>
+                        {% endif %}
+                    </td>
+
+                    <!-- Peluquero -->
+                    <td>
+                        {% if c.peluquero %}
+                        <span class="fw-bold" style="color: var(--brand-deep); font-size: 12px;">
+                            <i class="bi bi-person-badge me-1"></i>{{ c.peluquero.nombre }}
+                        </span>
+                        {% else %}
+                        <span style="color: var(--text-light); font-size: 12px; font-style: italic;">Sin asignar</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Duración -->
+                    <td>
+                        <span class="text-muted" style="font-size: 12px;">{{ c.duracion_minutos }} min</span>
+                    </td>
+
+                    <!-- Estado -->
+                    <td style="text-align: center;">
+                        {% if c.estado == 'pendiente' %}
+                        <span class="badge-pos badge-warning"><i class="bi bi-hourglass-split"></i> Pendiente</span>
+                        {% elif c.estado == 'confirmada' %}
+                        <span class="badge-pos badge-info"><i class="bi bi-check-circle"></i> Confirmada</span>
+                        {% elif c.estado == 'en_proceso' %}
+                        <span class="badge-pos badge-accent"><i class="bi bi-water"></i> En Baño</span>
+                        {% elif c.estado == 'completada' %}
+                        <span class="badge-pos badge-success"><i class="bi bi-check2-all"></i> Atendida</span>
+                        {% else %}
+                        <span class="badge-pos badge-danger"><i class="bi bi-x-circle"></i> Cancelada</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Acciones -->
+                    <td style="text-align: right; white-space: nowrap;">
+                        <div class="d-inline-flex align-items-center gap-1">
+                            {% if c.estado != 'completada' and c.estado != 'cancelada' %}
+                            <!-- Botón Iniciar Atención -->
+                            {% if c.estado == 'pendiente' or c.estado == 'confirmada' %}
+                            <form action="{% url 'cita_cambiar_estado' c.pk 'en_proceso' %}" method="post" class="d-inline m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-outline-pos" style="padding: 3px 7px; font-size: 11px; color: var(--brand-emerald);" title="Pasar a: En Baño">
+                                    <i class="bi bi-play-fill"></i>
+                                </button>
+                            </form>
+                            {% elif c.estado == 'en_proceso' %}
+                            <form action="{% url 'cita_cambiar_estado' c.pk 'completada' %}" method="post" class="d-inline m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-outline-pos" style="padding: 3px 7px; font-size: 11px; color: var(--brand-deep);" title="Marcar como Atendida">
+                                    <i class="bi bi-check2-all"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% endif %}
+
+                            <a href="{% url 'cita_editar' c.pk %}" class="btn-outline-pos" style="padding: 3px 7px; font-size: 11px;" title="Editar Cita">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+
+                            {% if c.estado != 'cancelada' and c.estado != 'completada' %}
+                            <form action="{% url 'cita_cambiar_estado' c.pk 'cancelada' %}" method="post" class="d-inline m-0" onsubmit="return confirm('¿Deseas cancelar esta cita?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-outline-pos" style="padding: 3px 7px; font-size: 11px; color: var(--state-danger);" title="Cancelar Cita">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px 16px; color: var(--text-muted);">
+                        <i class="bi bi-calendar-x" style="font-size: 32px; color: var(--text-light); display: block; margin-bottom: 8px;"></i>
+                        No hay citas agendadas{% if fecha_sel or peluquero_sel or estado_sel %} con los filtros seleccionados{% endif %}.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

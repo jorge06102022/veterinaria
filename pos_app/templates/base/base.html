@@ -109,6 +109,9 @@
         <a href="{% url 'clientes_list' %}" class="nav-link {% if 'cliente' in request.resolver_match.url_name or 'mascota' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-person-hearts"></i> Clientes & Mascotas
         </a>
+        <a href="{% url 'citas_agenda' %}" class="nav-link {% if 'cita' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-calendar-check"></i> Agenda de Citas
+        </a>
         <a href="{% url 'peluqueria_dashboard' %}" class="nav-link {% if 'peluqueria' in request.resolver_match.url_name or 'liquidacion' in request.resolver_match.url_name or 'adelanto' in request.resolver_match.url_name %}active{% endif %}">
             <i class="bi bi-scissors"></i> Peluquería & Comisiones
         </a>
@@ -125,6 +128,9 @@
         </a>
         <a href="{% url 'reportes' %}" class="nav-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
             <i class="bi bi-graph-up-arrow"></i> Reportes Financieros
+        </a>
+        <a href="{% url 'bitacora_auditoria' %}" class="nav-link {% if request.resolver_match.url_name == 'bitacora_auditoria' %}active{% endif %}">
+            <i class="bi bi-shield-check"></i> Bitácora de Auditoría
         </a>
     </nav>
 

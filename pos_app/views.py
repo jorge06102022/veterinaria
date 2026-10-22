@@ -702,6 +702,129 @@ def liquidacion_jornada(request, peluquero_id):
 
 
 # ==============================================================================
+# SUBMÓDULO: AGENDA DE CITAS DE PELUQUERÍA & GROOMING
+# ==============================================================================
+
+@login_required
+def citas_agenda(request):
+    """Vista de agenda de citas de peluquería canina con filtros por fecha, peluquero y estado."""
+    from .models import CitaPeluqueria
+    fecha_str = request.GET.get('fecha')
+    peluquero_id = request.GET.get('peluquero')
+    estado = request.GET.get('estado')
+
+    citas = CitaPeluqueria.objects.select_related('cliente', 'mascota', 'servicio', 'peluquero').all()
+
+    if fecha_str:
+        citas = citas.filter(fecha_cita=fecha_str)
+    if peluquero_id:
+        citas = citas.filter(peluquero_id=peluquero_id)
+    if estado:
+        citas = citas.filter(estado=estado)
+
+    peluqueros = Trabajador.objects.filter(activo=True, rol='peluquero')
+    hoy = timezone.now().date()
+    citas_hoy_count = CitaPeluqueria.objects.filter(fecha_cita=hoy).exclude(estado='cancelada').count()
+    citas_pendientes_count = CitaPeluqueria.objects.filter(estado__in=['pendiente', 'confirmada']).count()
+
+    return render(request, 'peluqueria/citas_agenda.html', {
+        'citas': citas,
+        'peluqueros': peluqueros,
+        'fecha_sel': fecha_str or '',
+        'peluquero_sel': int(peluquero_id) if peluquero_id else '',
+        'estado_sel': estado or '',
+        'hoy': hoy,
+        'citas_hoy_count': citas_hoy_count,
+        'citas_pendientes_count': citas_pendientes_count,
+    })
+
+
+@login_required
+def cita_crear(request):
+    """Agendar una nueva cita de peluquería con validación de horarios y peluqueros."""
+    from .forms import CitaPeluqueriaForm
+    if request.method == 'POST':
+        form = CitaPeluqueriaForm(request.POST)
+        if form.is_valid():
+            cita = form.save()
+            messages.success(request, f"Cita #{cita.pk} agendada para {cita.mascota.nombre} el {cita.fecha_cita} a las {cita.hora_inicio.strftime('%H:%M')}.")
+            return redirect('citas_agenda')
+    else:
+        cliente_id = request.GET.get('cliente')
+        mascota_id = request.GET.get('mascota')
+        initial = {'duracion_minutos': 60, 'fecha_cita': timezone.now().date()}
+        if cliente_id:
+            initial['cliente'] = cliente_id
+        if mascota_id:
+            initial['mascota'] = mascota_id
+        form = CitaPeluqueriaForm(initial=initial)
+
+    return render(request, 'peluqueria/cita_form.html', {
+        'form': form,
+        'titulo': 'Agendar Cita de Peluquería'
+    })
+
+
+@login_required
+def cita_editar(request, pk):
+    """Editar estado, horario o servicio de una cita de peluquería."""
+    from .models import CitaPeluqueria
+    from .forms import CitaPeluqueriaForm
+    cita = get_object_or_404(CitaPeluqueria, pk=pk)
+    if request.method == 'POST':
+        form = CitaPeluqueriaForm(request.POST, instance=cita)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Cita #{cita.pk} ({cita.mascota.nombre}) actualizada exitosamente.")
+            return redirect('citas_agenda')
+    else:
+        form = CitaPeluqueriaForm(instance=cita)
+
+    return render(request, 'peluqueria/cita_form.html', {
+        'form': form,
+        'cita': cita,
+        'titulo': f'Editar Cita #{cita.pk} — {cita.mascota.nombre}'
+    })
+
+
+@login_required
+@require_POST
+def cita_cambiar_estado(request, pk, nuevo_estado):
+    """Cambio rápido de estado para citas (confirmada, en_proceso, completada, cancelada)."""
+    from .models import CitaPeluqueria
+    cita = get_object_or_404(CitaPeluqueria, pk=pk)
+    estados_validos = ['pendiente', 'confirmada', 'en_proceso', 'completada', 'cancelada']
+    if nuevo_estado in estados_validos:
+        cita.estado = nuevo_estado
+        cita.save()
+        messages.success(request, f"Cita #{cita.pk} actualizada a: {cita.get_estado_display()}.")
+    return redirect('citas_agenda')
+
+
+@login_required
+def bitacora_auditoria(request):
+    """Consulta de la bitácora inmutable de auditoría de seguridad y operaciones del sistema."""
+    from .models import BitacoraAuditoria
+    modulo = request.GET.get('modulo', '').strip()
+    accion = request.GET.get('accion', '').strip()
+
+    logs = BitacoraAuditoria.objects.select_related('usuario').all()
+    if modulo:
+        logs = logs.filter(modulo__icontains=modulo)
+    if accion:
+        logs = logs.filter(accion=accion)
+
+    logs = logs[:100]
+
+    return render(request, 'base/bitacora_auditoria.html', {
+        'logs': logs,
+        'modulo_sel': modulo,
+        'accion_sel': accion,
+        'total_logs': BitacoraAuditoria.objects.count(),
+    })
+
+
+# ==============================================================================
 # MÓDULO OBLIGATORIO: CIERRE DE CAJA (EFECTIVO Y BANCO SEPARADOS)
 # ==============================================================================
 
@@ -757,19 +880,25 @@ def caja_detalle(request):
             sesion_caja=caja_activa, medio_pago='transferencia', estado='confirmado'
         ).aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
 
-        # 5. Efectivo esperado en gaveta:
-        # Base Inicial + Ingresos Efectivo - Egresos Efectivo - Adelantos Efectivo - Pagos Peluquero Efectivo
+        # 5. Compras de mercancía pagadas en esta sesión de caja
+        compras_qs = Compra.objects.filter(sesion_caja=caja_activa, estado='recibida_pagada')
+        compras_efectivo = compras_qs.filter(metodo_pago='efectivo').aggregate(t=Sum('total'))['t'] or Decimal('0.00')
+        compras_banco = compras_qs.filter(metodo_pago='transferencia').aggregate(t=Sum('total'))['t'] or Decimal('0.00')
+
+        # 6. Efectivo esperado en gaveta:
+        # Base Inicial + Ingresos Efectivo - Egresos Efectivo - Adelantos Efectivo - Pagos Peluquero Efectivo - Compras Efectivo
         efectivo_esperado = (
             caja_activa.monto_inicial_efectivo
             + ventas_efectivo
             - egresos_efectivo
             - adelantos_efectivo
             - pagos_peluquero_efectivo
+            - compras_efectivo
         )
 
-        # 6. Banco neto esperado (Transferencias + Tarjetas - Salidas Bancarias)
+        # 7. Banco neto esperado (Transferencias + Tarjetas - Salidas Bancarias)
         banco_ingresos = ventas_transferencia + ventas_tarjeta + ventas_otros
-        banco_salidas = egresos_banco + adelantos_banco + pagos_peluquero_banco
+        banco_salidas = egresos_banco + adelantos_banco + pagos_peluquero_banco + compras_banco
         banco_neto = banco_ingresos - banco_salidas
 
         datos_caja = {
@@ -786,6 +915,8 @@ def caja_detalle(request):
             'adelantos_banco': adelantos_banco,
             'pagos_peluquero_efectivo': pagos_peluquero_efectivo,
             'pagos_peluquero_banco': pagos_peluquero_banco,
+            'compras_efectivo': compras_efectivo,
+            'compras_banco': compras_banco,
             'efectivo_esperado': efectivo_esperado,
             'banco_ingresos': banco_ingresos,
             'banco_salidas': banco_salidas,
@@ -854,8 +985,9 @@ def caja_cerrar(request):
             e_efectivo = Egreso.objects.filter(sesion_caja=caja, metodo_pago='efectivo').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
             ad_efectivo = AdelantoPeluquero.objects.filter(sesion_caja=caja, medio_entrega='efectivo').exclude(estado='anulado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
             p_efectivo = PagoLiquidacion.objects.filter(sesion_caja=caja, medio_pago='efectivo', estado='confirmado').aggregate(t=Sum('monto'))['t'] or Decimal('0.00')
+            c_efectivo = Compra.objects.filter(sesion_caja=caja, metodo_pago='efectivo', estado='recibida_pagada').aggregate(t=Sum('total'))['t'] or Decimal('0.00')
 
-            efectivo_esperado = caja.monto_inicial_efectivo + v_efectivo - e_efectivo - ad_efectivo - p_efectivo
+            efectivo_esperado = caja.monto_inicial_efectivo + v_efectivo - e_efectivo - ad_efectivo - p_efectivo - c_efectivo
             diferencia = efectivo_real - efectivo_esperado
 
             caja.fecha_cierre = timezone.now()
@@ -1129,6 +1261,17 @@ def compra_registrar(request):
         'proveedores': proveedores,
         'productos': productos,
         'caja_activa': caja_activa
+    })
+
+
+@login_required
+def compra_detalle(request, pk):
+    """Consulta detallada de una orden de compra de mercancía y sus ítems."""
+    compra = get_object_or_404(Compra.objects.select_related('proveedor', 'sesion_caja'), pk=pk)
+    detalles = compra.detalles.select_related('producto').all()
+    return render(request, 'compras/compra_detalle.html', {
+        'compra': compra,
+        'detalles': detalles,
     })
 
 

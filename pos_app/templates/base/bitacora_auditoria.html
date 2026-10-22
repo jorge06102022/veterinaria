@@ -1,0 +1,108 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Bitácora de Auditoría — PetPOS Pro{% endblock %}
+{% block page_title %}Bitácora de Auditoría del Sistema{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h5 class="fw-bold mb-1" style="color: var(--brand-deep);">Bitácora de Auditoría & Trazabilidad</h5>
+        <small class="text-muted">Registro inmutable de acciones críticas, accesos administrativos y operaciones del sistema.</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge-pos badge-info">
+            <i class="bi bi-shield-lock me-1"></i> Total Registros: {{ total_logs }}
+        </span>
+    </div>
+</div>
+
+<!-- Filtros de Auditoría -->
+<div class="card-pos mb-4">
+    <div class="card-pos-body py-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5 col-12">
+                <input type="text" name="modulo" value="{{ modulo_sel }}" class="form-control form-control-sm" placeholder="Filtrar por módulo o detalle..." style="border-color: var(--border-color);">
+            </div>
+            <div class="col-md-4 col-8">
+                <select name="accion" class="form-select form-select-sm" style="border-color: var(--border-color);">
+                    <option value="">Todas las acciones</option>
+                    <option value="login" {% if accion_sel == 'login' %}selected{% endif %}>Inicio de Sesión</option>
+                    <option value="logout" {% if accion_sel == 'logout' %}selected{% endif %}>Cierre de Sesión</option>
+                    <option value="caja_apertura" {% if accion_sel == 'caja_apertura' %}selected{% endif %}>Apertura de Caja</option>
+                    <option value="caja_cierre" {% if accion_sel == 'caja_cierre' %}selected{% endif %}>Cierre de Caja</option>
+                    <option value="venta_creada" {% if accion_sel == 'venta_creada' %}selected{% endif %}>Venta Procesada</option>
+                    <option value="venta_anulada" {% if accion_sel == 'venta_anulada' %}selected{% endif %}>Venta Anulada</option>
+                    <option value="compra_registrada" {% if accion_sel == 'compra_registrada' %}selected{% endif %}>Compra Registrada</option>
+                    <option value="egreso_registrado" {% if accion_sel == 'egreso_registrado' %}selected{% endif %}>Egreso Registrado</option>
+                </select>
+            </div>
+            <div class="col-md-3 col-4 d-flex gap-2">
+                <button type="submit" class="btn-accent flex-grow-1" style="padding: 6px 12px; font-size: 12px;">
+                    <i class="bi bi-funnel-fill me-1"></i> Filtrar
+                </button>
+                {% if modulo_sel or accion_sel %}
+                <a href="{% url 'bitacora_auditoria' %}" class="btn-outline-pos" style="padding: 6px 10px; font-size: 12px;" title="Limpiar">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Registros de Auditoría -->
+<div class="card-pos">
+    <div class="card-pos-header">
+        <span><i class="bi bi-journal-text me-2" style="color: var(--brand-emerald);"></i>Eventos Registrados en la Bitácora</span>
+        <span class="badge-pos badge-info">{{ logs|length }} mostrados</span>
+    </div>
+    <div class="table-responsive-pos">
+        <table class="table-pos">
+            <thead>
+                <tr>
+                    <th>Fecha & Hora</th>
+                    <th>Usuario Responsable</th>
+                    <th>Acción</th>
+                    <th>Módulo / Objeto</th>
+                    <th>Detalle de la Operación</th>
+                    <th>IP Origen</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in logs %}
+                <tr>
+                    <td style="color: var(--text-muted); font-size: 12px; white-space: nowrap;">
+                        <i class="bi bi-clock me-1 text-muted"></i>{{ l.fecha|date:"d/m/Y H:i:s" }}
+                    </td>
+                    <td>
+                        <span class="fw-bold" style="color: var(--brand-deep); font-size: 13px;">
+                            <i class="bi bi-person-circle me-1 text-muted"></i>{{ l.usuario.username|default:"Sistema Automático" }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge-pos badge-info">{{ l.get_accion_display }}</span>
+                    </td>
+                    <td style="font-weight: 600; color: var(--brand-petroleum);">
+                        {{ l.modulo }}{% if l.objeto_id %} #{{ l.objeto_id }}{% endif %}
+                    </td>
+                    <td style="font-size: 12px; color: var(--text-main);">
+                        {{ l.descripcion }}
+                    </td>
+                    <td style="color: var(--text-muted); font-size: 11px; font-family: monospace;">
+                        {{ l.direccion_ip|default:"127.0.0.1" }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px 16px; color: var(--text-muted);">
+                        <i class="bi bi-shield-check" style="font-size: 32px; color: var(--text-light); display: block; margin-bottom: 8px;"></i>
+                        No hay eventos registrados en la bitácora aún.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

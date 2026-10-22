@@ -96,6 +96,10 @@
                             <td class="text-end text-danger fw-bold">-${{ datos.egresos_efectivo|floatformat:0 }}</td>
                         </tr>
                         <tr>
+                            <td class="text-muted">(−) Compras de mercancía en Efectivo:</td>
+                            <td class="text-end text-danger fw-bold">-${{ datos.compras_efectivo|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
                             <td class="text-muted">(−) Adelantos a Peluqueros en Efectivo:</td>
                             <td class="text-end text-danger fw-bold">-${{ datos.adelantos_efectivo|floatformat:0 }}</td>
                         </tr>
@@ -128,6 +132,10 @@
                         <tr>
                             <td class="text-muted">(−) Egresos y nómina pagados por Banco:</td>
                             <td class="text-end text-danger fw-bold">-${{ datos.egresos_banco|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">(−) Compras de mercancía pagadas por Banco:</td>
+                            <td class="text-end text-danger fw-bold">-${{ datos.compras_banco|floatformat:0 }}</td>
                         </tr>
                         <tr>
                             <td class="text-muted">(−) Adelantos y pagos a Peluquero por Banco:</td>

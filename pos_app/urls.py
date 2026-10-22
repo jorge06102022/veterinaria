@@ -26,8 +26,12 @@ urlpatterns = [
     path('ventas/<int:pk>/', views.venta_detalle, name='venta_detalle'),
     path('ventas/<int:pk>/anular/', views.anular_venta, name='anular_venta'),
 
-    # Peluquería de Mascotas, Comisiones y Liquidaciones
+    # Peluquería de Mascotas, Comisiones, Agenda y Liquidaciones
     path('peluqueria/', views.peluqueria_dashboard, name='peluqueria_dashboard'),
+    path('peluqueria/citas/', views.citas_agenda, name='citas_agenda'),
+    path('peluqueria/citas/nueva/', views.cita_crear, name='cita_crear'),
+    path('peluqueria/citas/<int:pk>/editar/', views.cita_editar, name='cita_editar'),
+    path('peluqueria/citas/<int:pk>/estado/<str:nuevo_estado>/', views.cita_cambiar_estado, name='cita_cambiar_estado'),
     path('peluqueria/adelanto/', views.adelanto_registrar, name='adelanto_registrar'),
     path('peluqueria/liquidar/<int:peluquero_id>/', views.liquidacion_jornada, name='liquidacion_jornada'),
     path('peluqueros/', views.peluqueros_list, name='peluqueros_list'),
@@ -36,6 +40,7 @@ urlpatterns = [
     path('peluqueros/<int:pk>/editar/', views.peluquero_editar, name='peluquero_editar'),
     path('peluqueros/<int:pk>/toggle-activo/', views.peluquero_toggle_activo, name='peluquero_toggle_activo'),
     path('peluqueros/<int:pk>/eliminar/', views.peluquero_eliminar, name='peluquero_eliminar'),
+    path('auditoria/', views.bitacora_auditoria, name='bitacora_auditoria'),
 
     # Clientes y Mascotas
     path('clientes/', views.clientes_list, name='clientes_list'),
@@ -53,6 +58,7 @@ urlpatterns = [
     # Compras y Proveedores
     path('compras/', views.compras_list, name='compras_list'),
     path('compras/nueva/', views.compra_registrar, name='compra_registrar'),
+    path('compras/<int:pk>/', views.compra_detalle, name='compra_detalle'),
     path('proveedores/', views.proveedores_list, name='proveedores_list'),
     path('proveedores/nuevo/', views.proveedor_crear, name='proveedor_crear'),
     path('proveedores/<int:pk>/', views.proveedor_detalle, name='proveedor_detalle'),

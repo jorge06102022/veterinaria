@@ -36,19 +36,23 @@ class Command(BaseCommand):
         password = options['password']
         email = options['email']
 
-        # 1. Crear o actualizar el administrador solicitado
-        user, created = User.objects.get_or_create(username=username)
-        user.set_password(password)
-        user.email = email
-        user.is_staff = True
-        user.is_superuser = True
-        user.is_active = True
-        user.save()
-
+        # 1. Crear el administrador solicitado si no existe, o asegurar privilegios si ya existe
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={'email': email, 'is_staff': True, 'is_superuser': True, 'is_active': True}
+        )
         if created:
-            self.stdout.write(self.style.SUCCESS(f"Usuario administrador '{username}' creado exitosamente con acceso total."))
+            user.set_password(password)
+            user.save()
+            self.stdout.write(self.style.SUCCESS(f"Usuario administrador '{username}' creado exitosamente con contraseña inicial."))
         else:
-            self.stdout.write(self.style.SUCCESS(f"Usuario administrador '{username}' actualizado exitosamente con acceso total."))
+            user.is_staff = True
+            user.is_superuser = True
+            user.is_active = True
+            if email and not user.email:
+                user.email = email
+            user.save()
+            self.stdout.write(self.style.SUCCESS(f"Usuario administrador '{username}' ya existía. Permisos staff/superuser confirmados sin alterar contraseña existente."))
 
         # 2. Remover usuarios de prueba previos para dejar exclusivamente la cuenta autorizada
         usuarios_antiguos = User.objects.exclude(username=username)

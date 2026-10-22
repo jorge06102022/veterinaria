@@ -463,6 +463,85 @@ class AtencionPeluqueria(models.Model):
         return f"{self.nombre_servicio} - {masc} (${self.valor_neto:,.0f}) Peluquero: {pelu}"
 
 
+class CitaPeluqueria(models.Model):
+    """
+    Agenda de citas para servicios de peluquería y spa canino.
+    Permite gestionar turnos, evitar cruces de horario y realizar seguimiento.
+    """
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente / Agendada'),
+        ('confirmada', 'Confirmada'),
+        ('en_proceso', 'En Proceso / En Baño'),
+        ('completada', 'Completada / Atendida'),
+        ('cancelada', 'Cancelada'),
+    ]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="citas_peluqueria", verbose_name="Propietario")
+    mascota = models.ForeignKey(Mascota, on_delete=models.CASCADE, related_name="citas_peluqueria", verbose_name="Mascota")
+    servicio = models.ForeignKey(ServicioPeluqueria, on_delete=models.PROTECT, related_name="citas", verbose_name="Servicio Solicitado")
+    peluquero = models.ForeignKey(Trabajador, on_delete=models.SET_NULL, null=True, blank=True, related_name="citas_asignadas", verbose_name="Peluquero Asignado")
+    
+    fecha_cita = models.DateField(default=timezone.now, verbose_name="Fecha de la Cita")
+    hora_inicio = models.TimeField(verbose_name="Hora de Inicio")
+    duracion_minutos = models.PositiveIntegerField(default=60, verbose_name="Duración Estimada (Minutos)")
+    
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente', verbose_name="Estado de la Cita")
+    observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones / Instrucciones Especiales")
+    
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Cita de Peluquería"
+        verbose_name_plural = "Citas de Peluquería"
+        ordering = ['fecha_cita', 'hora_inicio']
+
+    def __str__(self):
+        pelu = self.peluquero.nombre if self.peluquero else "Sin asignar"
+        return f"Cita: {self.mascota.nombre} ({self.cliente.nombre}) - {self.fecha_cita} {self.hora_inicio} [{self.get_estado_display()}] Peluquero: {pelu}"
+
+
+class BitacoraAuditoria(models.Model):
+    """
+    Registro inmutable de auditoría para operaciones críticas del sistema POS.
+    Registra quién, cuándo, qué acción ejecutó y los detalles de auditoría.
+    """
+    ACCION_CHOICES = [
+        ('login', 'Inicio de Sesión'),
+        ('logout', 'Cierre de Sesión'),
+        ('caja_apertura', 'Apertura de Caja'),
+        ('caja_cierre', 'Cierre de Caja'),
+        ('venta_creada', 'Venta Procesada'),
+        ('venta_anulada', 'Venta Anulada'),
+        ('producto_creado', 'Producto Creado'),
+        ('producto_modificado', 'Producto Modificado'),
+        ('stock_ajuste', 'Ajuste Manual de Inventario'),
+        ('compra_registrada', 'Compra de Mercancía Registrada'),
+        ('egreso_registrado', 'Egreso Registrado'),
+        ('personal_modificado', 'Personal / Peluquero Modificado'),
+        ('proveedor_modificado', 'Proveedor Modificado'),
+        ('cita_creada', 'Cita de Peluquería Agendada'),
+        ('cita_modificada', 'Cita de Peluquería Modificada'),
+    ]
+
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Usuario Responsable")
+    accion = models.CharField(max_length=35, choices=ACCION_CHOICES, verbose_name="Acción Realizada")
+    modulo = models.CharField(max_length=50, verbose_name="Módulo Afectado")
+    objeto_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="ID Objeto")
+    descripcion = models.TextField(verbose_name="Detalle de la Operación")
+    direccion_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name="Dirección IP")
+    fecha = models.DateTimeField(default=timezone.now, verbose_name="Fecha y Hora")
+
+    class Meta:
+        verbose_name = "Registro de Auditoría"
+        verbose_name_plural = "Bitácora de Auditoría"
+        ordering = ['-fecha']
+
+    def __str__(self):
+        user = self.usuario.username if self.usuario else "Sistema"
+        return f"[{self.fecha.strftime('%d/%m/%Y %H:%M')}] {user} - {self.get_accion_display()}: {self.modulo}"
+
+
 # ==============================================================================
 # 6. MÓDULO ESPECIAL: ADELANTOS, LIQUIDACIÓN Y PAGOS DEL PELUQUERO
 # ==============================================================================

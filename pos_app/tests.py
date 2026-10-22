@@ -20,7 +20,8 @@ from pos_app.models import (
     Categoria, Producto, Cliente, Mascota, Trabajador, Proveedor,
     ServicioPeluqueria, SesionCaja, Venta, DetalleVenta,
     PagoVenta, AtencionPeluqueria, AdelantoPeluquero,
-    LiquidacionPeluquero, PagoLiquidacion, Egreso, MovimientoInventario
+    LiquidacionPeluquero, PagoLiquidacion, Egreso, MovimientoInventario,
+    Compra, DetalleCompra, CitaPeluqueria, BitacoraAuditoria
 )
 
 User = get_user_model()
@@ -428,4 +429,120 @@ class PosPetShopTestSuite(TestCase):
         self.assertEqual(res_toggle.status_code, 302)
         proveedor.refresh_from_db()
         self.assertFalse(proveedor.activo)
+
+    # --------------------------------------------------------------------------
+    # 8. COMPRAS CON AFECTACIÓN EXACTA DE CAJA FÍSICA Y KARDEX
+    # --------------------------------------------------------------------------
+    def test_compra_en_efectivo_descuenta_caja_y_actualiza_stock(self):
+        """Verifica que una compra en efectivo registre entrada de stock y descuente la gaveta de caja."""
+        proveedor = Proveedor.objects.create(nombre="Distribuidora Nutripet")
+        stock_ant = self.producto.stock
+
+        payload = {
+            'proveedor': proveedor.pk,
+            'numero_factura': 'FAC-999',
+            'metodo_pago': 'efectivo',
+            'estado': 'recibida_pagada',
+            'items_json': json.dumps([{
+                'producto_id': self.producto.pk,
+                'cantidad': 5,
+                'costo_unitario': 20000
+            }])
+        }
+
+        res = self.client.post('/compras/nueva/', payload)
+        self.assertEqual(res.status_code, 302)
+
+        # 1. Stock aumentó exactamente en 5 unidades
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, stock_ant + 5)
+
+        # 2. Kardex registrado
+        kardex = MovimientoInventario.objects.filter(producto=self.producto, tipo='entrada_compra').first()
+        self.assertIsNotNone(kardex)
+        self.assertEqual(kardex.cantidad, 5)
+
+        # 3. Ver detalle de compra
+        compra = Compra.objects.filter(numero_factura_proveedor='FAC-999').first()
+        self.assertIsNotNone(compra)
+        self.assertEqual(compra.total, Decimal('100000.00'))
+
+        res_det = self.client.get(f'/compras/{compra.pk}/')
+        self.assertEqual(res_det.status_code, 200)
+
+        # 4. Verificación de caja: los $100.000 reducen el efectivo esperado
+        res_caja = self.client.get('/caja/')
+        self.assertEqual(res_caja.status_code, 200)
+        datos = res_caja.context['datos']
+        self.assertEqual(datos['compras_efectivo'], Decimal('100000.00'))
+        # Base ($50.000) - Compra Efectivo ($100.000) = -$50.000
+        self.assertEqual(datos['efectivo_esperado'], Decimal('-50000.00'))
+
+    # --------------------------------------------------------------------------
+    # 9. AGENDA DE CITAS DE PELUQUERÍA Y PREVENCIÓN DE SOLAPAMIENTOS
+    # --------------------------------------------------------------------------
+    def test_agenda_citas_creacion_y_bloqueo_solapamiento(self):
+        """Verifica el agendamiento de citas y la prevención de cruces de horario para un peluquero."""
+        from datetime import time, date
+
+        # 1. Agendar cita válida
+        res_cita = self.client.post('/peluqueria/citas/nueva/', {
+            'cliente': self.cliente_obj.pk,
+            'mascota': self.mascota_obj.pk,
+            'servicio': self.servicio.pk,
+            'peluquero': self.peluquero.pk,
+            'fecha_cita': '2026-10-25',
+            'hora_inicio': '10:00',
+            'duracion_minutos': 60,
+            'estado': 'pendiente',
+            'observaciones': 'Baño con champú neutro'
+        })
+        self.assertEqual(res_cita.status_code, 302)
+        cita1 = CitaPeluqueria.objects.filter(fecha_cita='2026-10-25', hora_inicio=time(10, 0)).first()
+        self.assertIsNotNone(cita1)
+
+        # 2. Intento de solapamiento: misma fecha, mismo peluquero a las 10:30 (dentro del rango 10:00 a 11:00)
+        res_solapada = self.client.post('/peluqueria/citas/nueva/', {
+            'cliente': self.cliente_obj.pk,
+            'mascota': self.mascota_obj.pk,
+            'servicio': self.servicio.pk,
+            'peluquero': self.peluquero.pk,
+            'fecha_cita': '2026-10-25',
+            'hora_inicio': '10:30',
+            'duracion_minutos': 45,
+            'estado': 'pendiente'
+        })
+        # Debe fallar la validación y retornar el formulario (HTTP 200 con error)
+        self.assertEqual(res_solapada.status_code, 200)
+        self.assertContains(res_solapada, 'ya tiene la cita')
+
+        # 3. Cambio rápido de estado a en_proceso
+        res_estado = self.client.post(f'/peluqueria/citas/{cita1.pk}/estado/en_proceso/')
+        self.assertEqual(res_estado.status_code, 302)
+        cita1.refresh_from_db()
+        self.assertEqual(cita1.estado, 'en_proceso')
+
+    # --------------------------------------------------------------------------
+    # 10. SEGURIDAD Y BITÁCORA DE AUDITORÍA
+    # --------------------------------------------------------------------------
+    def test_bitacora_auditoria_y_control_de_acceso(self):
+        """Verifica la consulta de la bitácora y la protección de vistas para no autenticados."""
+        # 1. Crear registro de prueba en la bitácora
+        BitacoraAuditoria.objects.create(
+            usuario=self.admin,
+            accion='caja_apertura',
+            modulo='Caja',
+            descripcion='Apertura formal de turno de prueba'
+        )
+
+        res_audit = self.client.get('/auditoria/')
+        self.assertEqual(res_audit.status_code, 200)
+        self.assertContains(res_audit, 'Apertura formal de turno de prueba')
+
+        # 2. Cliente anónimo es redirigido a login
+        anon_client = Client()
+        res_anon = anon_client.get('/auditoria/')
+        self.assertEqual(res_anon.status_code, 302)
+        self.assertIn('/login/', res_anon.url)
+
 

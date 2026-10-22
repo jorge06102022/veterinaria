@@ -28,6 +28,7 @@
                     <th>Método de Pago</th>
                     <th>Estado</th>
                     <th style="text-align: right;">Total Factura</th>
+                    <th style="text-align: right;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,6 +49,11 @@
                         </span>
                     </td>
                     <td style="text-align: right; font-weight: 800; color: var(--brand-deep);">${{ c.total|floatformat:0 }}</td>
+                    <td style="text-align: right;">
+                        <a href="{% url 'compra_detalle' c.pk %}" class="btn-outline-pos" style="padding: 4px 8px; font-size: 12px;" title="Ver factura y productos">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
