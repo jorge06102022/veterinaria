@@ -30,6 +30,12 @@ urlpatterns = [
     path('peluqueria/', views.peluqueria_dashboard, name='peluqueria_dashboard'),
     path('peluqueria/adelanto/', views.adelanto_registrar, name='adelanto_registrar'),
     path('peluqueria/liquidar/<int:peluquero_id>/', views.liquidacion_jornada, name='liquidacion_jornada'),
+    path('peluqueros/', views.peluqueros_list, name='peluqueros_list'),
+    path('peluqueros/nuevo/', views.peluquero_crear, name='peluquero_crear'),
+    path('peluqueros/<int:pk>/', views.peluquero_detalle, name='peluquero_detalle'),
+    path('peluqueros/<int:pk>/editar/', views.peluquero_editar, name='peluquero_editar'),
+    path('peluqueros/<int:pk>/toggle-activo/', views.peluquero_toggle_activo, name='peluquero_toggle_activo'),
+    path('peluqueros/<int:pk>/eliminar/', views.peluquero_eliminar, name='peluquero_eliminar'),
 
     # Clientes y Mascotas
     path('clientes/', views.clientes_list, name='clientes_list'),
@@ -44,9 +50,15 @@ urlpatterns = [
     path('caja/abrir/', views.caja_abrir, name='caja_abrir'),
     path('caja/cerrar/', views.caja_cerrar, name='caja_cerrar'),
 
-    # Compras a Proveedores
+    # Compras y Proveedores
     path('compras/', views.compras_list, name='compras_list'),
     path('compras/nueva/', views.compra_registrar, name='compra_registrar'),
+    path('proveedores/', views.proveedores_list, name='proveedores_list'),
+    path('proveedores/nuevo/', views.proveedor_crear, name='proveedor_crear'),
+    path('proveedores/<int:pk>/', views.proveedor_detalle, name='proveedor_detalle'),
+    path('proveedores/<int:pk>/editar/', views.proveedor_editar, name='proveedor_editar'),
+    path('proveedores/<int:pk>/toggle-activo/', views.proveedor_toggle_activo, name='proveedor_toggle_activo'),
+    path('proveedores/<int:pk>/eliminar/', views.proveedor_eliminar, name='proveedor_eliminar'),
 
     # Egresos Operativos y Pagos al Personal
     path('egresos/', views.egresos_list_create, name='egresos_list_create'),
@@ -60,7 +72,6 @@ urlpatterns = [
     path('reporte-diario/', views.reporte_diario_pdf, name='reporte_diario'),
     path('api/stock-bajo/', views.api_stock_bajo, name='api_stock_bajo'),
 
-    # Contingencia y Sesión
-    path('crear-admin/', views.crear_admin, name='crear_admin'),
+    # Sesión
     path('logout/', LogoutView.as_view(), name='logout'),
 ]

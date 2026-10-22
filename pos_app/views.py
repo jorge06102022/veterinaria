@@ -1351,14 +1351,250 @@ def reporte_diario_pdf(request):
     return response
 
 
-def crear_admin(request):
-    """Comando web protegido para contingencias."""
-    key = request.GET.get("key")
-    if key != "crear123":
-        return HttpResponse("No autorizado", status=403)
-    user, created = User.objects.get_or_create(username="admin", defaults={"email": "admin@petshop.local"})
-    user.set_password("admin123")
-    user.is_superuser = True
-    user.is_staff = True
-    user.save()
-    return HttpResponse("Superusuario admin asegurado (admin / admin123)")
+# ==============================================================================
+# MÓDULO DE GESTIÓN DE PELUQUEROS Y PERSONAL
+# ==============================================================================
+
+@login_required
+def peluqueros_list(request):
+    """Listado y gestión completa de peluqueros y personal operativo."""
+    q = request.GET.get('q', '').strip()
+    estado = request.GET.get('estado', '')
+    rol = request.GET.get('rol', '')
+
+    trabajadores = Trabajador.objects.all().annotate(
+        total_atenciones=Count('servicios_realizados'),
+        total_adelantos=Count('adelantos'),
+        total_liquidaciones=Count('liquidaciones')
+    )
+
+    if q:
+        trabajadores = trabajadores.filter(
+            Q(nombre__icontains=q) | Q(documento__icontains=q) | Q(telefono__icontains=q)
+        )
+    if estado == 'activo':
+        trabajadores = trabajadores.filter(activo=True)
+    elif estado == 'inactivo':
+        trabajadores = trabajadores.filter(activo=False)
+    if rol:
+        trabajadores = trabajadores.filter(rol=rol)
+
+    return render(request, 'peluqueria/peluqueros_list.html', {
+        'trabajadores': trabajadores,
+        'q': q,
+        'estado_sel': estado,
+        'rol_sel': rol,
+    })
+
+
+@login_required
+def peluquero_crear(request):
+    """Registra un nuevo peluquero o trabajador en el sistema."""
+    if request.method == 'POST':
+        form = TrabajadorForm(request.POST)
+        if form.is_valid():
+            trabajador = form.save()
+            messages.success(request, f"Trabajador/Peluquero '{trabajador.nombre}' registrado exitosamente.")
+            return redirect('peluqueros_list')
+    else:
+        form = TrabajadorForm(initial={'rol': 'peluquero', 'porcentaje_comision_peluqueria': Decimal('50.00'), 'activo': True})
+    return render(request, 'peluqueria/peluquero_form.html', {
+        'form': form,
+        'titulo': 'Nuevo Peluquero / Trabajador'
+    })
+
+
+@login_required
+def peluquero_editar(request, pk):
+    """Edita los datos de un peluquero o trabajador sin alterar su historial financiero."""
+    trabajador = get_object_or_404(Trabajador, pk=pk)
+    if request.method == 'POST':
+        form = TrabajadorForm(request.POST, instance=trabajador)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Datos de '{trabajador.nombre}' actualizados correctamente.")
+            return redirect('peluqueros_list')
+    else:
+        form = TrabajadorForm(instance=trabajador)
+    return render(request, 'peluqueria/peluquero_form.html', {
+        'form': form,
+        'trabajador': trabajador,
+        'titulo': f'Editar: {trabajador.nombre}'
+    })
+
+
+@login_required
+def peluquero_detalle(request, pk):
+    """Ficha de perfil e historial financiero de servicios, adelantos y liquidaciones del peluquero."""
+    trabajador = get_object_or_404(Trabajador, pk=pk)
+    atenciones = trabajador.servicios_realizados.select_related('servicio', 'mascota', 'cliente').order_by('-fecha')[:25]
+    adelantos = trabajador.adelantos.order_by('-fecha')[:15]
+    liquidaciones = trabajador.liquidaciones.order_by('-fecha_jornada')[:15]
+
+    total_cobrado_historico = trabajador.servicios_realizados.aggregate(t=Sum('valor_neto'))['t'] or Decimal('0.00')
+    total_comisiones_historico = trabajador.servicios_realizados.aggregate(t=Sum('comision_calculada'))['t'] or Decimal('0.00')
+
+    return render(request, 'peluqueria/peluquero_detalle.html', {
+        'trabajador': trabajador,
+        'atenciones': atenciones,
+        'adelantos': adelantos,
+        'liquidaciones': liquidaciones,
+        'total_cobrado_historico': total_cobrado_historico,
+        'total_comisiones_historico': total_comisiones_historico,
+    })
+
+
+@login_required
+@require_POST
+def peluquero_toggle_activo(request, pk):
+    """Activa o desactiva un peluquero para impedir nuevas atenciones sin borrar su historial."""
+    trabajador = get_object_or_404(Trabajador, pk=pk)
+    trabajador.activo = not trabajador.activo
+    trabajador.save()
+    estado_str = "activado" if trabajador.activo else "desactivado"
+    messages.success(request, f"El peluquero '{trabajador.nombre}' ha sido {estado_str} exitosamente.")
+    return redirect('peluqueros_list')
+
+
+@login_required
+@require_POST
+def peluquero_eliminar(request, pk):
+    """
+    Elimina un peluquero SOLO si no tiene historial financiero asociado.
+    Si tiene atenciones, adelantos o liquidaciones, bloquea la eliminación y ofrece desactivar.
+    """
+    trabajador = get_object_or_404(Trabajador, pk=pk)
+    tiene_atenciones = trabajador.servicios_realizados.exists()
+    tiene_adelantos = trabajador.adelantos.exists()
+    tiene_liquidaciones = trabajador.liquidaciones.exists()
+
+    if tiene_atenciones or tiene_adelantos or tiene_liquidaciones:
+        messages.error(
+            request,
+            f"No se puede eliminar a '{trabajador.nombre}' porque posee registros financieros asociados "
+            f"(atenciones, adelantos o liquidaciones). Puedes desactivarlo para que no aparezca en nuevas atenciones sin alterar la contabilidad."
+        )
+        return redirect('peluqueros_list')
+
+    nombre = trabajador.nombre
+    trabajador.delete()
+    messages.success(request, f"El trabajador '{nombre}' fue eliminado exitosamente al no tener historial vinculado.")
+    return redirect('peluqueros_list')
+
+
+# ==============================================================================
+# MÓDULO DE GESTIÓN DE PROVEEDORES
+# ==============================================================================
+
+@login_required
+def proveedores_list(request):
+    """Listado y gestión completa de proveedores de mercancía."""
+    q = request.GET.get('q', '').strip()
+    estado = request.GET.get('estado', '')
+
+    proveedores = Proveedor.objects.all().annotate(
+        total_compras=Count('compras')
+    )
+
+    if q:
+        proveedores = proveedores.filter(
+            Q(nombre__icontains=q) | Q(contacto__icontains=q) | Q(nit__icontains=q) | Q(telefono__icontains=q)
+        )
+    if estado == 'activo':
+        proveedores = proveedores.filter(activo=True)
+    elif estado == 'inactivo':
+        proveedores = proveedores.filter(activo=False)
+
+    return render(request, 'compras/proveedores_list.html', {
+        'proveedores': proveedores,
+        'q': q,
+        'estado_sel': estado,
+    })
+
+
+@login_required
+def proveedor_crear(request):
+    """Registra un nuevo proveedor en el sistema."""
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST)
+        if form.is_valid():
+            prov = form.save()
+            messages.success(request, f"Proveedor '{prov.nombre}' registrado exitosamente.")
+            next_url = request.GET.get('next')
+            if next_url:
+                return redirect(next_url)
+            return redirect('proveedores_list')
+    else:
+        form = ProveedorForm(initial={'activo': True})
+    return render(request, 'compras/proveedor_form.html', {
+        'form': form,
+        'titulo': 'Nuevo Proveedor'
+    })
+
+
+@login_required
+def proveedor_editar(request, pk):
+    """Edita la información de un proveedor existente."""
+    proveedor = get_object_or_404(Proveedor, pk=pk)
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST, instance=proveedor)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Proveedor '{proveedor.nombre}' actualizado con éxito.")
+            return redirect('proveedores_list')
+    else:
+        form = ProveedorForm(instance=proveedor)
+    return render(request, 'compras/proveedor_form.html', {
+        'form': form,
+        'proveedor': proveedor,
+        'titulo': f'Editar: {proveedor.nombre}'
+    })
+
+
+@login_required
+def proveedor_detalle(request, pk):
+    """Detalle del proveedor y compras asociadas."""
+    proveedor = get_object_or_404(Proveedor, pk=pk)
+    compras = proveedor.compras.order_by('-fecha')[:25]
+    total_compras_valor = compras.aggregate(t=Sum('total'))['t'] or Decimal('0.00')
+
+    return render(request, 'compras/proveedor_detalle.html', {
+        'proveedor': proveedor,
+        'compras': compras,
+        'total_compras_valor': total_compras_valor,
+    })
+
+
+@login_required
+@require_POST
+def proveedor_toggle_activo(request, pk):
+    """Activa o desactiva un proveedor para compras sin borrar su historial."""
+    proveedor = get_object_or_404(Proveedor, pk=pk)
+    proveedor.activo = not proveedor.activo
+    proveedor.save()
+    estado_str = "activado" if proveedor.activo else "desactivado"
+    messages.success(request, f"Proveedor '{proveedor.nombre}' ha sido {estado_str}.")
+    return redirect('proveedores_list')
+
+
+@login_required
+@require_POST
+def proveedor_eliminar(request, pk):
+    """
+    Elimina un proveedor SOLO si no tiene compras históricas registradas.
+    Si tiene compras, bloquea la eliminación protegiendo la integridad referencial.
+    """
+    proveedor = get_object_or_404(Proveedor, pk=pk)
+    if proveedor.compras.exists():
+        messages.error(
+            request,
+            f"No se puede eliminar al proveedor '{proveedor.nombre}' porque posee facturas de compra históricas registradas. "
+            f"Puedes desactivarlo para evitar nuevas compras sin afectar el inventario ni la contabilidad."
+        )
+        return redirect('proveedores_list')
+
+    nombre = proveedor.nombre
+    proveedor.delete()
+    messages.success(request, f"Proveedor '{nombre}' eliminado exitosamente al no tener compras asociadas.")
+    return redirect('proveedores_list')
+

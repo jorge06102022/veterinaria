@@ -22,7 +22,12 @@
                 
                 <div class="row g-3 mb-4">
                     <div class="col-md-5">
-                        <label class="form-label">Proveedor *</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label mb-0">Proveedor *</label>
+                            <a href="{% url 'proveedor_crear' %}?next={% url 'compra_registrar' %}" class="small text-decoration-none fw-semibold" style="color: var(--brand-primary); font-size: 11px;">
+                                <i class="bi bi-plus-circle me-1"></i>Nuevo Proveedor
+                            </a>
+                        </div>
                         <select name="proveedor" class="form-select" required>
                             <option value="">Seleccione proveedor...</option>
                             {% for p in proveedores %}

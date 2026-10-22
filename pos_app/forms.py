@@ -81,17 +81,35 @@ class MascotaForm(forms.ModelForm):
 
 
 class TrabajadorForm(forms.ModelForm):
+    """Formulario para gestión de peluqueros y personal operativo."""
     class Meta:
         model = Trabajador
         fields = ['nombre', 'telefono', 'documento', 'rol', 'porcentaje_comision_peluqueria', 'activo']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo'}),
-            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono'}),
-            'documento': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cédula'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo del trabajador o peluquero'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono o celular de contacto'}),
+            'documento': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cédula o documento de identidad'}),
             'rol': forms.Select(attrs={'class': 'form-select'}),
             'porcentaje_comision_peluqueria': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'min': '0', 'max': '100'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        if not nombre:
+            raise forms.ValidationError("El nombre completo es obligatorio.")
+        return nombre
+
+    def clean_documento(self):
+        doc = self.cleaned_data.get('documento', '').strip() if self.cleaned_data.get('documento') else ''
+        if doc:
+            # Validar que no haya otro trabajador con la misma cédula
+            qs = Trabajador.objects.filter(documento__iexact=doc)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("Ya existe otro trabajador registrado con este número de documento.")
+        return doc or None
 
 
 class ServicioPeluqueriaForm(forms.ModelForm):
@@ -107,18 +125,35 @@ class ServicioPeluqueriaForm(forms.ModelForm):
 
 
 class ProveedorForm(forms.ModelForm):
+    """Formulario para creación y edición de proveedores."""
     class Meta:
         model = Proveedor
         fields = ['nombre', 'contacto', 'telefono', 'nit', 'direccion', 'email', 'activo']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la empresa distribuidora'}),
-            'contacto': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Asesor comercial'}),
-            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono'}),
-            'nit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'NIT'}),
-            'direccion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre comercial o razón social'}),
+            'contacto': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Asesor comercial o contacto'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono o WhatsApp'}),
+            'nit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'NIT o documento fiscal (opcional)'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección física o ciudad'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'ventas@proveedor.com'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        if not nombre:
+            raise forms.ValidationError("El nombre o razón social del proveedor es obligatorio.")
+        return nombre
+
+    def clean_nit(self):
+        nit = self.cleaned_data.get('nit', '').strip() if self.cleaned_data.get('nit') else ''
+        if nit:
+            qs = Proveedor.objects.filter(nit__iexact=nit)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("Ya existe un proveedor registrado con este NIT / documento.")
+        return nit or None
 
 
 class EgresoForm(forms.ModelForm):
@@ -136,6 +171,11 @@ class EgresoForm(forms.ModelForm):
             'comprobante': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Mostrar sólo trabajadores activos para asignar pagos de nómina
+        self.fields['trabajador_asociado'].queryset = Trabajador.objects.filter(activo=True)
+
 
 class AdelantoPeluqueroForm(forms.ModelForm):
     class Meta:
@@ -147,6 +187,11 @@ class AdelantoPeluqueroForm(forms.ModelForm):
             'medio_entrega': forms.Select(attrs={'class': 'form-select'}),
             'motivo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Adelanto para almuerzo o urgencia'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo peluqueros activos pueden recibir nuevos adelantos
+        self.fields['peluquero'].queryset = Trabajador.objects.filter(activo=True, rol='peluquero')
 
 
 class AperturaCajaForm(forms.Form):

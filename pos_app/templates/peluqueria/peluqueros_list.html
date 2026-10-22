@@ -1,0 +1,126 @@
+{% extends 'base/base.html' %}
+{% block title %}Personal de Peluquería — PetPOS Pro{% endblock %}
+{% block page_title %}Administración de Peluqueros & Personal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <form method="get" class="d-flex gap-2 flex-wrap align-items-center" style="max-width: 600px;">
+        <input type="text" name="q" value="{{ q|default:'' }}" class="form-control" placeholder="Buscar por nombre, cédula o teléfono..." style="width: 250px;">
+        <select name="estado" class="form-select" style="width: 150px;">
+            <option value="">Todos los estados</option>
+            <option value="activo" {% if estado_sel == 'activo' %}selected{% endif %}>✓ Activos</option>
+            <option value="inactivo" {% if estado_sel == 'inactivo' %}selected{% endif %}>✗ Inactivos</option>
+        </select>
+        <select name="rol" class="form-select" style="width: 150px;">
+            <option value="">Todos los roles</option>
+            <option value="peluquero" {% if rol_sel == 'peluquero' %}selected{% endif %}>Peluquero</option>
+            <option value="vendedor" {% if rol_sel == 'vendedor' %}selected{% endif %}>Vendedor</option>
+            <option value="apoyo" {% if rol_sel == 'apoyo' %}selected{% endif %}>Apoyo / Auxiliar</option>
+        </select>
+        <button type="submit" class="btn-accent"><i class="bi bi-search me-1"></i> Filtrar</button>
+        {% if q or estado_sel or rol_sel %}
+        <a href="{% url 'peluqueros_list' %}" class="btn-outline-pos" title="Limpiar filtros">✕</a>
+        {% endif %}
+    </form>
+    <a href="{% url 'peluquero_crear' %}" class="btn-accent">
+        <i class="bi bi-person-plus-fill me-1"></i> Nuevo Peluquero / Trabajador
+    </a>
+</div>
+
+<div class="card-pos">
+    <div class="card-pos-header">
+        <span><i class="bi bi-scissors me-2" style="color: var(--brand-emerald);"></i>Peluqueros y Personal Registrado ({{ trabajadores|length }})</span>
+        <a href="{% url 'peluqueria_dashboard' %}" class="btn-outline-pos btn-sm" style="font-size: 12px;">
+            <i class="bi bi-speedometer2 me-1"></i> Panel de Peluquería
+        </a>
+    </div>
+    <div class="table-responsive-pos">
+        <table class="table-pos">
+            <thead>
+                <tr>
+                    <th>Nombre Completo</th>
+                    <th>Rol</th>
+                    <th>Cédula / Documento</th>
+                    <th>Teléfono</th>
+                    <th style="text-align: center;">Comisión Peluquería</th>
+                    <th style="text-align: center;">Atenciones Históricas</th>
+                    <th>Estado</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in trabajadores %}
+                <tr>
+                    <td>
+                        <a href="{% url 'peluquero_detalle' t.pk %}" style="font-weight: 700; color: var(--brand-petroleum); text-decoration: none;">
+                            <i class="bi bi-person-badge-fill me-1" style="color: var(--brand-emerald);"></i>{{ t.nombre }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge-pos {% if t.rol == 'peluquero' %}badge-accent{% else %}badge-info{% endif %}">
+                            {{ t.get_rol_display }}
+                        </span>
+                    </td>
+                    <td style="color: var(--text-muted);">{{ t.documento|default:"—" }}</td>
+                    <td>
+                        {% if t.telefono %}
+                        <a href="https://wa.me/{{ t.telefono }}" target="_blank" style="color: var(--brand-emerald); text-decoration: none; font-weight: 600;">
+                            <i class="bi bi-whatsapp me-1 text-success"></i>{{ t.telefono }}
+                        </a>
+                        {% else %}
+                        <span style="color: var(--text-light);">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center; font-weight: 700; color: var(--brand-emerald);">
+                        {% if t.rol == 'peluquero' %}
+                        {{ t.porcentaje_comision_peluqueria }}%
+                        {% else %}
+                        <span style="color: var(--text-light); font-weight: normal;">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="badge-pos badge-info">{{ t.total_atenciones }}</span>
+                    </td>
+                    <td>
+                        {% if t.activo %}
+                        <span class="badge-pos badge-success">✓ Activo</span>
+                        {% else %}
+                        <span class="badge-pos badge-danger">✗ Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <a href="{% url 'peluquero_detalle' t.pk %}" class="btn-outline-pos" style="padding: 4px 8px; font-size: 12px;" title="Ver perfil e historial">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'peluquero_editar' t.pk %}" class="btn-outline-pos" style="padding: 4px 8px; font-size: 12px; margin-left: 2px;" title="Editar datos">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form method="post" action="{% url 'peluquero_toggle_activo' t.pk %}" class="d-inline" onsubmit="return confirm('¿Deseas {% if t.activo %}desactivar{% else %}activar{% endif %} a {{ t.nombre }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-outline-pos" style="padding: 4px 8px; font-size: 12px; margin-left: 2px; color: {% if t.activo %}var(--state-warning){% else %}var(--brand-emerald){% endif %};" title="{% if t.activo %}Desactivar{% else %}Activar{% endif %}">
+                                <i class="bi bi-power"></i>
+                            </button>
+                        </form>
+                        {% if t.total_atenciones == 0 and t.total_adelantos == 0 and t.total_liquidaciones == 0 %}
+                        <form method="post" action="{% url 'peluquero_eliminar' t.pk %}" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar definitivamente a {{ t.nombre }}? No tiene historial financiero.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-outline-pos" style="padding: 4px 8px; font-size: 12px; margin-left: 2px; color: var(--state-danger); border-color: rgba(220, 38, 38, 0.3);" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px 16px;">
+                        <i class="bi bi-person-x" style="font-size: 36px; color: var(--text-light); display: block; margin-bottom: 8px;"></i>
+                        No se encontraron trabajadores registrados con los criterios seleccionados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

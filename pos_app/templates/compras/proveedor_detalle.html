@@ -1,0 +1,180 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Ficha de Proveedor: {{ proveedor.nombre }} — PetPOS Pro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'proveedores_list' %}" class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center transition shadow-sm">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </a>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">{{ proveedor.nombre }}</h1>
+                    {% if proveedor.activo %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Activo
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactivo
+                        </span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-slate-500 font-medium">NIT: {{ proveedor.nit|default:"Sin NIT registrado" }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'compra_registrar' %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition">
+                <i class="fas fa-cart-plus"></i>
+                <span>Registrar Compra con este Proveedor</span>
+            </a>
+            <a href="{% url 'proveedor_editar' proveedor.pk %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm">
+                <i class="fas fa-edit text-amber-500"></i>
+                <span>Editar</span>
+            </a>
+            <a href="{% url 'proveedor_toggle_activo' proveedor.pk %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm">
+                <i class="fas {% if proveedor.activo %}fa-ban text-amber-500{% else %}fa-check text-emerald-500{% endif %}"></i>
+                <span>{% if proveedor.activo %}Desactivar{% else %}Habilitar{% endif %}</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Supplier Info Cards -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Contact & Business Card -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+            <h2 class="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-id-card text-amber-500"></i> Datos Generales
+            </h2>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <span class="block text-[11px] font-semibold text-slate-400">Razón Social:</span>
+                    <span class="font-bold text-slate-800 text-sm">{{ proveedor.nombre }}</span>
+                </div>
+                <div>
+                    <span class="block text-[11px] font-semibold text-slate-400">NIT / Identificación Fiscal:</span>
+                    <span class="font-mono font-semibold text-slate-700">{{ proveedor.nit|default:"No registrado" }}</span>
+                </div>
+                <div>
+                    <span class="block text-[11px] font-semibold text-slate-400">Persona de Contacto:</span>
+                    <span class="font-semibold text-slate-800">{{ proveedor.contacto|default:"No registrado" }}</span>
+                </div>
+                <div>
+                    <span class="block text-[11px] font-semibold text-slate-400">Teléfono / WhatsApp:</span>
+                    <span class="font-semibold text-slate-800">
+                        {% if proveedor.telefono %}
+                            <a href="tel:{{ proveedor.telefono }}" class="text-emerald-600 hover:underline">{{ proveedor.telefono }}</a>
+                        {% else %}
+                            <span class="text-slate-400 italic">No registrado</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div>
+                    <span class="block text-[11px] font-semibold text-slate-400">Correo Electrónico:</span>
+                    <span class="font-semibold text-slate-800">
+                        {% if proveedor.email %}
+                            <a href="mailto:{{ proveedor.email }}" class="text-indigo-600 hover:underline">{{ proveedor.email }}</a>
+                        {% else %}
+                            <span class="text-slate-400 italic">No registrado</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div>
+                    <span class="block text-[11px] font-semibold text-slate-400">Dirección Física / Ubicación:</span>
+                    <span class="text-slate-700">{{ proveedor.direccion|default:"No registrada" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial KPI Cards -->
+        <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-500/20 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg mb-4">
+                        <i class="fas fa-boxes-stacked"></i>
+                    </div>
+                    <p class="text-xs uppercase tracking-wider font-semibold text-indigo-100">Total Compras Realizadas</p>
+                    <p class="text-3xl font-black mt-1">{{ total_compras }}</p>
+                </div>
+                <p class="text-[11px] text-indigo-200 mt-4">Facturas o remisiones de mercancía registradas</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-amber-500 to-amber-700 rounded-2xl p-6 text-white shadow-lg shadow-amber-500/20 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg mb-4">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <p class="text-xs uppercase tracking-wider font-semibold text-amber-100">Volumen Total Comprado</p>
+                    <p class="text-3xl font-black mt-1">${{ monto_total|floatformat:2 }}</p>
+                </div>
+                <p class="text-[11px] text-amber-100 mt-4">Monto acumulado histórico en inventario</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchases History Table -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-file-invoice text-amber-500 text-sm"></i>
+                <h3 class="font-bold text-slate-800 text-sm">Historial de Compras y Suministros</h3>
+            </div>
+            <span class="text-xs font-semibold text-slate-400">{{ total_compras }} transacciones</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        <th class="py-3 px-4">Factura / N° Remisión</th>
+                        <th class="py-3 px-4">Fecha y Hora</th>
+                        <th class="py-3 px-4 text-center">Ítems / Unidades</th>
+                        <th class="py-3 px-4 text-right">Total Factura</th>
+                        <th class="py-3 px-4 text-right">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
+                    {% for c in compras %}
+                    <tr class="hover:bg-slate-50/60 transition">
+                        <td class="py-3 px-4 font-bold text-slate-800">
+                            <i class="fas fa-receipt text-slate-400 mr-1.5 text-xs"></i>
+                            {{ c.numero_factura|default:"Sin número" }}
+                        </td>
+                        <td class="py-3 px-4 text-slate-500 font-medium">
+                            {{ c.fecha|date:"d/m/Y H:i" }}
+                        </td>
+                        <td class="py-3 px-4 text-center font-medium">
+                            <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+                                {{ c.detalles.count }} ítems
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-right font-black text-slate-900">
+                            ${{ c.total|floatformat:2 }}
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <a href="{% url 'compra_detalle' c.pk %}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] transition">
+                                <i class="fas fa-eye text-[10px]"></i>
+                                <span>Ver Compra</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="py-10 text-center text-slate-400">
+                            <i class="fas fa-shopping-cart text-slate-300 text-2xl mb-2"></i>
+                            <p class="font-bold text-slate-600">No hay compras registradas con este proveedor</p>
+                            <p class="text-xs text-slate-400 mt-1">Cuando registres una compra de mercancía asociada a este proveedor aparecerá aquí.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

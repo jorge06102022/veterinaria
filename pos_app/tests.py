@@ -17,7 +17,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from pos_app.models import (
-    Categoria, Producto, Cliente, Mascota, Trabajador,
+    Categoria, Producto, Cliente, Mascota, Trabajador, Proveedor,
     ServicioPeluqueria, SesionCaja, Venta, DetalleVenta,
     PagoVenta, AtencionPeluqueria, AdelantoPeluquero,
     LiquidacionPeluquero, PagoLiquidacion, Egreso, MovimientoInventario
@@ -306,3 +306,126 @@ class PosPetShopTestSuite(TestCase):
         kardex = MovimientoInventario.objects.filter(producto=self.producto, tipo='anulacion_venta').first()
         self.assertIsNotNone(kardex)
         self.assertEqual(kardex.cantidad, 2)
+
+    # --------------------------------------------------------------------------
+    # 6. ADMINISTRACIÓN DE PELUQUEROS Y PERSONAL
+    # --------------------------------------------------------------------------
+    def test_peluquero_creacion_edicion_y_toggle_activo(self):
+        """Verifica la creación, edición y activación/desactivación de peluqueros."""
+        # 1. Crear nuevo peluquero
+        res = self.client.post('/peluqueros/nuevo/', {
+            'nombre': 'Andrea Estilista',
+            'rol': 'peluquero',
+            'documento': '1099887766',
+            'telefono': '3109998888',
+            'porcentaje_comision_peluqueria': '50.00',
+            'activo': 'on'
+        })
+        self.assertEqual(res.status_code, 302)
+        andrea = Trabajador.objects.filter(documento='1099887766').first()
+        self.assertIsNotNone(andrea)
+        self.assertEqual(andrea.nombre, 'Andrea Estilista')
+        self.assertEqual(andrea.porcentaje_comision_peluqueria, Decimal('50.00'))
+        self.assertTrue(andrea.activo)
+
+        # 2. Editar peluquero
+        res_edit = self.client.post(f'/peluqueros/{andrea.pk}/editar/', {
+            'nombre': 'Andrea Estilista Master',
+            'rol': 'peluquero',
+            'documento': '1099887766',
+            'telefono': '3101112222',
+            'porcentaje_comision_peluqueria': '50.00',
+            'activo': 'on'
+        })
+        self.assertEqual(res_edit.status_code, 302)
+        andrea.refresh_from_db()
+        self.assertEqual(andrea.nombre, 'Andrea Estilista Master')
+        self.assertEqual(andrea.telefono, '3101112222')
+
+        # 3. Toggle activo -> Inactivo
+        res_toggle = self.client.post(f'/peluqueros/{andrea.pk}/toggle-activo/')
+        self.assertEqual(res_toggle.status_code, 302)
+        andrea.refresh_from_db()
+        self.assertFalse(andrea.activo)
+
+    def test_peluquero_bloqueo_eliminacion_si_tiene_historial_financiero(self):
+        """Impide eliminar un peluquero si ya tiene atenciones o liquidaciones registradas."""
+        # Registrar una atención al peluquero existente
+        venta = Venta.objects.create(
+            total_venta=Decimal('40000.00'),
+            metodo_pago='efectivo',
+            sesion_caja=self.caja
+        )
+        AtencionPeluqueria.objects.create(
+            venta=venta,
+            servicio=self.servicio,
+            peluquero=self.peluquero,
+            mascota=self.mascota_obj,
+            precio_cobrado=Decimal('40000.00'),
+            porcentaje_comision=Decimal('50.00'),
+            comision_calculada=Decimal('20000.00'),
+            parte_negocio=Decimal('20000.00')
+        )
+
+        # Intentar eliminar al peluquero
+        res_del = self.client.post(f'/peluqueros/{self.peluquero.pk}/eliminar/')
+        self.assertEqual(res_del.status_code, 302)
+        # Sigue existiendo en la base de datos
+        self.assertTrue(Trabajador.objects.filter(pk=self.peluquero.pk).exists())
+
+        # Si creamos un peluquero sin historial, sí se puede eliminar
+        peluquero_sin_historial = Trabajador.objects.create(
+            nombre="Peluquero Temporal",
+            rol="peluquero",
+            documento="99988877"
+        )
+        res_del_ok = self.client.post(f'/peluqueros/{peluquero_sin_historial.pk}/eliminar/')
+        self.assertEqual(res_del_ok.status_code, 302)
+        self.assertFalse(Trabajador.objects.filter(pk=peluquero_sin_historial.pk).exists())
+
+    # --------------------------------------------------------------------------
+    # 7. ADMINISTRACIÓN DE PROVEEDORES
+    # --------------------------------------------------------------------------
+    def test_proveedor_creacion_edicion_y_busqueda(self):
+        """Verifica la creación, edición, alternancia de estado y búsqueda de proveedores."""
+        # 1. Crear proveedor
+        res = self.client.post('/proveedores/nuevo/', {
+            'nombre': 'Distribuidora Pet Grooming SAS',
+            'nit': '900123456-1',
+            'contacto': 'Marcos Venta',
+            'telefono': '3007654321',
+            'email': 'contacto@petgrooming.com',
+            'direccion': 'Calle 50 # 10-20 Bogotá',
+            'activo': 'on'
+        })
+        self.assertEqual(res.status_code, 302)
+        proveedor = Proveedor.objects.filter(nit='900123456-1').first()
+        self.assertIsNotNone(proveedor)
+        self.assertEqual(proveedor.nombre, 'Distribuidora Pet Grooming SAS')
+        self.assertTrue(proveedor.activo)
+
+        # 2. Editar proveedor
+        res_edit = self.client.post(f'/proveedores/{proveedor.pk}/editar/', {
+            'nombre': 'Distribuidora Pet Grooming Colombia SAS',
+            'nit': '900123456-1',
+            'contacto': 'Marcos Venta Directa',
+            'telefono': '3007654321',
+            'email': 'contacto@petgrooming.com',
+            'direccion': 'Calle 50 # 10-20 Bogotá',
+            'activo': 'on'
+        })
+        self.assertEqual(res_edit.status_code, 302)
+        proveedor.refresh_from_db()
+        self.assertEqual(proveedor.nombre, 'Distribuidora Pet Grooming Colombia SAS')
+
+        # 3. Listado con búsqueda por texto
+        res_list = self.client.get('/proveedores/?q=Grooming')
+        self.assertEqual(res_list.status_code, 200)
+        self.assertContains(res_list, 'Distribuidora Pet Grooming Colombia SAS')
+
+        # 4. Toggle activo
+        res_toggle = self.client.post(f'/proveedores/{proveedor.pk}/toggle-activo/')
+        self.assertEqual(res_toggle.status_code, 302)
+        proveedor.refresh_from_db()
+        self.assertFalse(proveedor.activo)
+
