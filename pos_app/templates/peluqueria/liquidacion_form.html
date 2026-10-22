@@ -5,27 +5,38 @@
 {% block content %}
 <div class="row g-4">
     <!-- Resumen de Liquidación y Fórmula Financiera -->
-    <div class="col-md-5">
-        <div class="card-pos p-4 border-info">
-            <h5 class="fw-bold text-white mb-3"><i class="bi bi-calculator-fill me-2 text-info"></i>Cálculo de Cierre Diario</h5>
-            <div class="p-3 rounded mb-4" style="background: var(--bg-app); border: 1px solid var(--border);">
-                <table class="table table-sm table-borderless text-light mb-0">
-                    <tr>
-                        <td>(+) Saldo Anterior Pendiente:</td>
-                        <td class="text-end fw-bold text-secondary">${{ saldo_anterior|floatformat:0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>(+) Comisiones de la Jornada (50%):</td>
-                        <td class="text-end fw-bold text-warning">+${{ total_comision_servicios|floatformat:0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>(−) Adelantos ya entregados:</td>
-                        <td class="text-end fw-bold text-danger">-${{ total_adelantos|floatformat:0 }}</td>
-                    </tr>
-                    <tr class="border-top" style="border-color: var(--border) !important;">
-                        <td class="fs-5 fw-bold text-white pt-2">(=) SALDO POR LIQUIDAR:</td>
-                        <td class="text-end fs-4 fw-bold text-warning pt-2">${{ saldo_a_liquidar|floatformat:0 }}</td>
-                    </tr>
+    <div class="col-lg-5 col-md-6">
+        <div class="card-pos p-4">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(88, 191, 165, 0.15); color: var(--brand-primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="bi bi-calculator"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0" style="color: var(--brand-deep);">Cálculo de Cierre Diario</h6>
+                    <small class="text-muted">Liquidación comisional del 50% menos adelantos</small>
+                </div>
+            </div>
+
+            <div style="background: #F8FAF9; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px;">
+                <table class="table-pos" style="border: none;">
+                    <tbody>
+                        <tr>
+                            <td style="color: var(--text-muted); font-size: 13px;">(+) Saldo Anterior Pendiente:</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--text-muted);">${{ saldo_anterior|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--brand-deep); font-size: 13px;">(+) Comisiones de la Jornada (50%):</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--brand-primary);">+${{ total_comision_servicios|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted); font-size: 13px;">(−) Adelantos ya entregados:</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--state-danger);">-${{ total_adelantos|floatformat:0 }}</td>
+                        </tr>
+                        <tr style="border-top: 2px solid var(--border-color);">
+                            <td style="font-weight: 800; color: var(--brand-deep); font-size: 14px; padding-top: 12px;">(=) SALDO POR LIQUIDAR:</td>
+                            <td style="text-align: right; font-weight: 800; color: var(--brand-primary); font-size: 20px; padding-top: 12px;">${{ saldo_a_liquidar|floatformat:0 }}</td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
 
@@ -33,57 +44,57 @@
             <form method="post">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Monto a Pagar en este momento ($):</label>
-                    <input type="number" name="monto_pago" class="form-control form-control-lg text-success fw-bold" value="{{ saldo_a_liquidar|floatformat:0 }}" min="0" step="500">
-                    <small class="text-muted">Si no se paga la totalidad, el saldo restante se traslada automáticamente a la siguiente jornada.</small>
+                    <label class="form-label">Monto a Cancelar en este momento ($):</label>
+                    <input type="number" name="monto_pago" class="form-control form-control-lg fw-bold" style="color: var(--brand-primary); font-size: 18px;" value="{{ saldo_a_liquidar|floatformat:0 }}" min="0" step="500">
+                    <small class="text-muted d-block mt-1">Si no se paga la totalidad, el saldo restante se traslada automáticamente a la siguiente jornada.</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Medio de Pago:</label>
+                    <label class="form-label">Medio de Pago:</label>
                     <select name="medio_pago" class="form-select">
-                        <option value="efectivo">Efectivo de Caja</option>
+                        <option value="efectivo">Efectivo de Caja (Registra egreso en caja)</option>
                         <option value="transferencia">Transferencia Bancaria</option>
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small text-secondary">Observaciones:</label>
+                <div class="mb-4">
+                    <label class="form-label">Observaciones del Cierre:</label>
                     <textarea name="observacion" class="form-control" rows="2" placeholder="Notas sobre el cierre o pago"></textarea>
                 </div>
-                <button type="submit" class="btn btn-accent w-100 py-3 fw-bold fs-5">
-                    <i class="bi bi-check2-circle me-1"></i> GUARDAR LIQUIDACIÓN
+                <button type="submit" class="btn-accent w-100 justify-content-center py-2" style="font-size: 15px;">
+                    <i class="bi bi-check2-circle me-1"></i> Guardar y Confirmar Liquidación
                 </button>
             </form>
         </div>
     </div>
 
     <!-- Servicios y Adelantos Imputados -->
-    <div class="col-md-7">
+    <div class="col-lg-7 col-md-6">
         <!-- Servicios de Peluquería Pendientes -->
         <div class="card-pos mb-4">
             <div class="card-pos-header">
-                <span><i class="bi bi-scissors me-2 text-info"></i>Servicios Pendientes por Liquidar ({{ servicios_pendientes|length }})</span>
+                <span><i class="bi bi-scissors me-2" style="color: var(--brand-primary);"></i>Servicios Pendientes por Liquidar ({{ servicios_pendientes|length }})</span>
             </div>
-            <div class="card-pos-body p-0">
-                <table class="table table-pos mb-0">
+            <div class="table-responsive-pos">
+                <table class="table-pos">
                     <thead>
                         <tr>
                             <th>Hora</th>
                             <th>Servicio</th>
                             <th>Mascota</th>
-                            <th class="text-end">Cobrado</th>
-                            <th class="text-end text-warning">Comisión (50%)</th>
+                            <th style="text-align: right;">Cobrado</th>
+                            <th style="text-align: right;">Comisión (50%)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for s in servicios_pendientes %}
                         <tr>
-                            <td>{{ s.fecha|date:"H:i" }}</td>
-                            <td class="fw-bold">{{ s.nombre_servicio }}</td>
-                            <td>{{ s.mascota.nombre|default:"Ocasional" }}</td>
-                            <td class="text-end">${{ s.valor_neto|floatformat:0 }}</td>
-                            <td class="text-end fw-bold text-warning">${{ s.comision_calculada|floatformat:0 }}</td>
+                            <td style="font-size: 12px; color: var(--text-muted);">{{ s.fecha|date:"H:i" }}</td>
+                            <td style="font-weight: 700; color: var(--brand-deep);">{{ s.nombre_servicio }}</td>
+                            <td><span class="badge-pos badge-info">{{ s.mascota.nombre|default:"Ocasional" }}</span></td>
+                            <td style="text-align: right; color: var(--text-muted);">${{ s.valor_neto|floatformat:0 }}</td>
+                            <td style="text-align: right; font-weight: 800; color: var(--brand-primary);">${{ s.comision_calculada|floatformat:0 }}</td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="5" class="text-center text-muted py-3">No hay servicios pendientes de liquidar.</td></tr>
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No hay servicios pendientes de liquidar para este trabajador.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -93,28 +104,28 @@
         <!-- Adelantos Imputados -->
         <div class="card-pos">
             <div class="card-pos-header">
-                <span><i class="bi bi-cash-coin me-2 text-danger"></i>Adelantos a Descontar en esta Liquidación ({{ adelantos_pendientes|length }})</span>
+                <span><i class="bi bi-cash-coin me-2" style="color: var(--state-danger);"></i>Adelantos a Descontar en esta Liquidación ({{ adelantos_pendientes|length }})</span>
             </div>
-            <div class="card-pos-body p-0">
-                <table class="table table-pos mb-0">
+            <div class="table-responsive-pos">
+                <table class="table-pos">
                     <thead>
                         <tr>
-                            <th>Hora</th>
-                            <th>Motivo</th>
+                            <th>Fecha</th>
                             <th>Medio</th>
-                            <th class="text-end">Monto</th>
+                            <th>Motivo</th>
+                            <th style="text-align: right;">Monto Adelanto</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for a in adelantos_pendientes %}
                         <tr>
-                            <td>{{ a.fecha|date:"H:i" }}</td>
-                            <td>{{ a.motivo|default:"Adelanto a cuenta" }}</td>
-                            <td>{{ a.get_medio_entrega_display }}</td>
-                            <td class="text-end fw-bold text-danger">-${{ a.monto|floatformat:0 }}</td>
+                            <td style="font-size: 12px; color: var(--text-muted);">{{ a.fecha|date:"d/m H:i" }}</td>
+                            <td><span class="badge-pos badge-info">{{ a.get_medio_entrega_display }}</span></td>
+                            <td style="font-size: 13px; color: var(--text-muted);">{{ a.motivo|default:"Adelanto a cuenta" }}</td>
+                            <td style="text-align: right; font-weight: 800; color: var(--state-danger);">-${{ a.monto|floatformat:0 }}</td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="4" class="text-center text-muted py-3">No hay adelantos pendientes por descontar.</td></tr>
+                        <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No hay adelantos pendientes por descontar.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

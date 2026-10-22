@@ -1,24 +1,26 @@
 {% extends 'base/base.html' %}
-{% block title %}Historial de Ventas — POS Pro{% endblock %}
-{% block page_title %}Historial de Ventas{% endblock %}
+{% block title %}Historial de Ventas — PetPOS Pro{% endblock %}
+{% block page_title %}Historial de Ventas & Facturación{% endblock %}
 
 {% block content %}
 
-<!-- Filtros -->
+<!-- Filtros de Fecha -->
 <div class="card-pos mb-4">
-    <div class="card-pos-body">
+    <div class="card-pos-body p-3">
         <form method="get" class="d-flex gap-3 flex-wrap align-items-end">
             <div>
-                <label class="form-label">Desde</label>
+                <label class="form-label mb-1">Desde Fecha</label>
                 <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="form-control">
             </div>
             <div>
-                <label class="form-label">Hasta</label>
+                <label class="form-label mb-1">Hasta Fecha</label>
                 <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="form-control">
             </div>
-            <button type="submit" class="btn-accent" style="align-self:flex-end">Filtrar</button>
+            <button type="submit" class="btn-accent" style="padding: 9px 18px;">
+                <i class="bi bi-funnel-fill me-1"></i> Filtrar
+            </button>
             {% if fecha_desde or fecha_hasta %}
-            <a href="{% url 'historial_ventas' %}" class="btn-outline-pos" style="align-self:flex-end">✕ Limpiar</a>
+            <a href="{% url 'historial_ventas' %}" class="btn-outline-pos" style="padding: 9px 14px;">✕ Limpiar</a>
             {% endif %}
         </form>
     </div>
@@ -27,82 +29,85 @@
 <!-- Resumen del filtro -->
 {% if totales.num %}
 <div class="row g-3 mb-4">
-    <div class="col-sm-4">
+    <div class="col-md-4">
         <div class="stat-card info">
             <div class="stat-icon info"><i class="bi bi-receipt"></i></div>
-            <div class="stat-label">Total Ventas</div>
+            <div class="stat-label">Comprobantes Emitidos</div>
             <div class="stat-value">{{ totales.num }}</div>
         </div>
     </div>
-    <div class="col-sm-4">
+    <div class="col-md-4">
         <div class="stat-card accent">
-            <div class="stat-icon accent"><i class="bi bi-cash"></i></div>
-            <div class="stat-label">Ingresos Totales</div>
+            <div class="stat-icon accent"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-label">Ingresos Totales Brutos</div>
             <div class="stat-value">${{ totales.total|floatformat:0 }}</div>
         </div>
     </div>
-    <div class="col-sm-4">
+    <div class="col-md-4">
         <div class="stat-card success">
             <div class="stat-icon success"><i class="bi bi-graph-up"></i></div>
-            <div class="stat-label">Ganancia Total</div>
-            <div class="stat-value">${{ totales.ganancia|floatformat:0 }}</div>
+            <div class="stat-label">Ganancia Bruta Estimada</div>
+            <div class="stat-value" style="color: var(--brand-primary);">${{ totales.ganancia|floatformat:0 }}</div>
         </div>
     </div>
 </div>
 {% endif %}
 
-<!-- Tabla -->
+<!-- Tabla de Ventas -->
 <div class="card-pos">
     <div class="card-pos-header">
-        <span><i class="bi bi-receipt-cutoff me-2" style="color:var(--info)"></i>Ventas ({{ ventas.paginator.count }})</span>
+        <span><i class="bi bi-receipt-cutoff me-2" style="color: var(--brand-primary);"></i>Ventas Registradas ({{ ventas.paginator.count }})</span>
     </div>
-    <div class="p-0">
-        <table class="table table-pos mb-0">
+    <div class="table-responsive-pos">
+        <table class="table-pos">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th># Factura</th>
                     <th>Fecha y Hora</th>
-                    <th>Productos</th>
-                    <th>Método</th>
-                    <th>Total</th>
-                    <th>Ganancia</th>
-                    <th>Margen</th>
-                    <th></th>
+                    <th style="text-align: center;">Items</th>
+                    <th>Método de Pago</th>
+                    <th style="text-align: right;">Total Venta</th>
+                    <th style="text-align: right;">Ganancia</th>
+                    <th style="text-align: center;">Margen</th>
+                    <th style="text-align: right;">Acción</th>
                 </tr>
             </thead>
             <tbody>
                 {% for v in ventas %}
                 <tr>
-                    <td style="font-weight:700;color:var(--accent-light)">#{{ v.pk }}</td>
-                    <td style="font-size:13px;color:var(--text-secondary)">{{ v.fecha|date:"d/m/Y H:i" }}</td>
-                    <td><span class="badge-pos badge-accent">{{ v.detalles.count }}</span></td>
+                    <td>
+                        <a href="{% url 'venta_detalle' v.pk %}" style="font-weight: 800; color: var(--brand-primary); text-decoration: none;">
+                            #{{ v.pk }}
+                        </a>
+                    </td>
+                    <td style="font-size: 12px; color: var(--text-muted);">{{ v.fecha|date:"d/m/Y H:i" }}</td>
+                    <td style="text-align: center;"><span class="badge-pos badge-info">{{ v.detalles.count }}</span></td>
                     <td>
                         {% if v.metodo_pago == 'efectivo' %}
-                            <span class="badge-pos badge-success">💵 Efectivo</span>
+                            <span class="badge-pos badge-success"><i class="bi bi-cash me-1"></i>Efectivo</span>
                         {% elif v.metodo_pago == 'tarjeta' %}
-                            <span class="badge-pos badge-info">💳 Tarjeta</span>
+                            <span class="badge-pos badge-info"><i class="bi bi-credit-card me-1"></i>Tarjeta</span>
                         {% else %}
-                            <span class="badge-pos badge-accent">📲 {{ v.get_metodo_pago_display }}</span>
+                            <span class="badge-pos badge-accent"><i class="bi bi-phone me-1"></i>{{ v.get_metodo_pago_display }}</span>
                         {% endif %}
                     </td>
-                    <td style="font-weight:700">${{ v.total_venta|floatformat:0 }}</td>
-                    <td style="color:var(--success);font-weight:600">${{ v.total_ganancia|floatformat:0 }}</td>
-                    <td style="font-size:13px;color:var(--text-secondary)">
+                    <td style="text-align: right; font-weight: 800; color: var(--brand-deep);">${{ v.total_venta|floatformat:0 }}</td>
+                    <td style="text-align: right; font-weight: 700; color: var(--brand-primary);">${{ v.total_ganancia|floatformat:0 }}</td>
+                    <td style="text-align: center; font-size: 12px; color: var(--text-muted);">
                         {% if v.total_venta > 0 %}
                             {{ v.total_ganancia|floatformat:0 }}/${{ v.total_venta|floatformat:0 }}
                         {% endif %}
                     </td>
-                    <td>
-                        <a href="{% url 'venta_detalle' v.pk %}" class="btn-outline-pos" style="padding:5px 12px;font-size:12px">
-                            Ver →
+                    <td style="text-align: right;">
+                        <a href="{% url 'venta_detalle' v.pk %}" class="btn-outline-pos" style="padding: 4px 10px; font-size: 12px;">
+                            Ver Factura &rarr;
                         </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" style="text-align:center;padding:60px;color:var(--text-muted)">
-                        <i class="bi bi-receipt" style="font-size:40px;display:block;margin-bottom:12px;opacity:0.3"></i>
-                        No hay ventas en este período
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px 16px;">
+                        No se encontraron ventas para los criterios seleccionados.
                     </td>
                 </tr>
                 {% endfor %}
@@ -110,20 +115,5 @@
         </table>
     </div>
 </div>
-
-<!-- Paginación -->
-{% if ventas.has_other_pages %}
-<div class="d-flex justify-content-center mt-4 gap-2">
-    {% if ventas.has_previous %}
-    <a href="?page={{ ventas.previous_page_number }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}" class="btn-outline-pos">← Anterior</a>
-    {% endif %}
-    <span style="padding:8px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;font-size:13px">
-        {{ ventas.number }} / {{ ventas.paginator.num_pages }}
-    </span>
-    {% if ventas.has_next %}
-    <a href="?page={{ ventas.next_page_number }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}" class="btn-outline-pos">Siguiente →</a>
-    {% endif %}
-</div>
-{% endif %}
 
 {% endblock %}

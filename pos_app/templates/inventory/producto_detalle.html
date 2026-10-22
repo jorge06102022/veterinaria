@@ -1,113 +1,118 @@
 {% extends 'base/base.html' %}
-{% block title %}{{ producto.nombre }} — POS Pro{% endblock %}
-{% block page_title %}Detalle Producto{% endblock %}
+{% block title %}{{ producto.nombre }} — PetPOS Pro{% endblock %}
+{% block page_title %}Ficha de Producto: {{ producto.nombre }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div></div>
     <div class="d-flex gap-2">
         <a href="{% url 'producto_editar' producto.pk %}" class="btn-accent">
-            <i class="bi bi-pencil me-1"></i> Editar
+            <i class="bi bi-pencil me-1"></i> Editar Producto
         </a>
-        <a href="{% url 'inventario' %}" class="btn-outline-pos">← Volver</a>
+        <a href="{% url 'inventario' %}" class="btn-outline-pos">← Volver al Inventario</a>
     </div>
 </div>
 
-<div class="row g-3">
+<div class="row g-4">
+    <!-- Ficha del Producto -->
     <div class="col-lg-4">
         <div class="card-pos">
             <div class="card-pos-body">
-                <div style="text-align:center;padding:20px 0">
-                    <div style="width:80px;height:80px;background:var(--accent-glow);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:36px">🛍️</div>
-                    <h2 style="font-size:20px;font-weight:800;margin-bottom:4px">{{ producto.nombre }}</h2>
-                    <span class="badge-pos badge-accent">{{ producto.sku }}</span>
+                <div style="text-align: center; padding: 16px 0;">
+                    <div style="width: 70px; height: 70px; background: var(--brand-glow); color: var(--brand-primary); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 32px;">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <h5 style="font-weight: 800; color: var(--brand-deep); margin-bottom: 4px;">{{ producto.nombre }}</h5>
+                    <span class="badge-pos badge-info">{{ producto.sku }}</span>
                     {% if producto.categoria %}
-                    <div style="margin-top:10px"><span class="badge-pos badge-info">{{ producto.categoria.nombre }}</span></div>
+                    <div style="margin-top: 8px;"><span class="badge-pos badge-accent">{{ producto.categoria.nombre }}</span></div>
                     {% endif %}
                 </div>
 
-                <hr style="border-color:var(--border)">
+                <hr style="border-color: var(--border-color); margin: 12px 0;">
 
                 <div class="row g-2 text-center">
                     <div class="col-6">
-                        <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">P. Compra</div>
-                        <div style="font-size:20px;font-weight:800;margin-top:4px">${{ producto.precio_compra|floatformat:0 }}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">P. Compra</div>
+                        <div style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-top: 2px;">${{ producto.precio_compra|floatformat:0 }}</div>
                     </div>
                     <div class="col-6">
-                        <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">P. Venta</div>
-                        <div style="font-size:20px;font-weight:800;margin-top:4px;color:var(--accent-light)">${{ producto.precio_venta|floatformat:0 }}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">P. Venta</div>
+                        <div style="font-size: 18px; font-weight: 800; color: var(--brand-primary); margin-top: 2px;">${{ producto.precio_venta|floatformat:0 }}</div>
                     </div>
                     <div class="col-6">
-                        <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Ganancia/ud</div>
-                        <div style="font-size:20px;font-weight:800;margin-top:4px;color:var(--success)">${{ producto.ganancia_unitaria|floatformat:0 }}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Ganancia/ud</div>
+                        <div style="font-size: 16px; font-weight: 800; color: var(--brand-primary); margin-top: 2px;">${{ producto.ganancia_unitaria|floatformat:0 }}</div>
                     </div>
                     <div class="col-6">
-                        <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Margen</div>
-                        <div style="font-size:20px;font-weight:800;margin-top:4px;color:var(--success)">{{ producto.margen_ganancia }}%</div>
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Margen</div>
+                        <div style="font-size: 16px; font-weight: 800; color: var(--brand-primary); margin-top: 2px;">{{ producto.margen_ganancia }}%</div>
                     </div>
                 </div>
 
-                <hr style="border-color:var(--border)">
+                <hr style="border-color: var(--border-color); margin: 12px 0;">
 
-                <div style="text-align:center">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">Stock Disponible</div>
-                    <div style="font-size:48px;font-weight:800;color:{% if producto.sin_stock %}var(--danger){% elif producto.stock_bajo %}var(--warning){% else %}var(--success){% endif %}">
+                <div style="text-align: center; padding: 8px 0;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Existencia Actual</div>
+                    <div style="font-size: 40px; font-weight: 800; line-height: 1.1; color:{% if producto.sin_stock %}var(--state-danger){% elif producto.stock_bajo %}var(--state-warning){% else %}var(--brand-primary){% endif %}">
                         {{ producto.stock }}
                     </div>
-                    <div style="font-size:12px;color:var(--text-muted)">Mínimo: {{ producto.stock_minimo }}</div>
-                    {% if producto.sin_stock %}
-                    <span class="badge-pos badge-danger mt-2">Sin stock</span>
-                    {% elif producto.stock_bajo %}
-                    <span class="badge-pos badge-warning mt-2">⚠ Stock bajo</span>
-                    {% else %}
-                    <span class="badge-pos badge-success mt-2">✓ Disponible</span>
-                    {% endif %}
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Stock mínimo de alerta: {{ producto.stock_minimo }}</div>
+                    <div style="margin-top: 8px;">
+                        {% if producto.sin_stock %}
+                        <span class="badge-pos badge-danger">Agotado</span>
+                        {% elif producto.stock_bajo %}
+                        <span class="badge-pos badge-warning">⚠ Stock bajo</span>
+                        {% else %}
+                        <span class="badge-pos badge-success">✓ Stock en nivel óptimo</span>
+                        {% endif %}
+                    </div>
                 </div>
 
                 {% if producto.descripcion %}
-                <hr style="border-color:var(--border)">
-                <p style="font-size:13px;color:var(--text-secondary)">{{ producto.descripcion }}</p>
+                <hr style="border-color: var(--border-color); margin: 12px 0;">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 0;">{{ producto.descripcion }}</p>
                 {% endif %}
 
-                <div style="font-size:11px;color:var(--text-muted);margin-top:12px">
-                    Creado: {{ producto.fecha_creacion|date:"d/m/Y H:i" }}<br>
-                    Actualizado: {{ producto.fecha_actualizacion|date:"d/m/Y H:i" }}
+                <div style="font-size: 11px; color: var(--text-light); margin-top: 14px; text-align: center;">
+                    Registrado: {{ producto.fecha_creacion|date:"d/m/Y H:i" }} &bull; Última act.: {{ producto.fecha_actualizacion|date:"d/m/Y H:i" }}
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Historial de Ventas -->
     <div class="col-lg-8">
         <div class="card-pos">
             <div class="card-pos-header">
-                <span><i class="bi bi-clock-history me-2" style="color:var(--info)"></i>Últimas Ventas de este Producto</span>
+                <span><i class="bi bi-clock-history me-2" style="color: var(--brand-primary);"></i>Últimas Ventas de este Producto</span>
             </div>
-            <div class="p-0">
-                <table class="table table-pos mb-0">
+            <div class="table-responsive-pos">
+                <table class="table-pos">
                     <thead>
                         <tr>
                             <th>Venta #</th>
                             <th>Fecha</th>
-                            <th>Cantidad</th>
-                            <th>Precio Vendido</th>
-                            <th>Subtotal</th>
-                            <th>Ganancia</th>
+                            <th style="text-align: center;">Cantidad</th>
+                            <th style="text-align: right;">Precio Vendido</th>
+                            <th style="text-align: right;">Subtotal</th>
+                            <th style="text-align: right;">Ganancia</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for d in historial %}
                         <tr>
-                            <td><a href="{% url 'venta_detalle' d.venta.pk %}" style="color:var(--accent-light);text-decoration:none;font-weight:600">#{{ d.venta.pk }}</a></td>
-                            <td style="font-size:13px;color:var(--text-secondary)">{{ d.venta.fecha|date:"d/m/Y H:i" }}</td>
-                            <td style="font-weight:700">{{ d.cantidad }}</td>
-                            <td>${{ d.precio_venta|floatformat:0 }}</td>
-                            <td style="font-weight:600">${{ d.subtotal|floatformat:0 }}</td>
-                            <td style="color:var(--success);font-weight:600">${{ d.ganancia|floatformat:0 }}</td>
+                            <td><a href="{% url 'venta_detalle' d.venta.pk %}" style="color: var(--brand-primary); text-decoration: none; font-weight: 700;">#{{ d.venta.pk }}</a></td>
+                            <td style="font-size: 12px; color: var(--text-muted);">{{ d.venta.fecha|date:"d/m/Y H:i" }}</td>
+                            <td style="text-align: center;"><span class="badge-pos badge-info">{{ d.cantidad }}</span></td>
+                            <td style="text-align: right; color: var(--text-main);">${{ d.precio_venta|floatformat:0 }}</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--brand-deep);">${{ d.subtotal|floatformat:0 }}</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--brand-primary);">${{ d.ganancia|floatformat:0 }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted)">
-                                Este producto aún no tiene ventas registradas
+                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px 16px;">
+                                No hay ventas registradas aún para este producto.
                             </td>
                         </tr>
                         {% endfor %}

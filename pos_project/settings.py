@@ -10,9 +10,9 @@ import dj_database_url
 # ─────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-pos-system-change-this-in-production-2024'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pos-system-petshop-key-2024')
 
-DEBUG = False
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 't')
 ALLOWED_HOSTS = ['*']
 
 # ─────────────────────────────────────────────
@@ -115,6 +115,9 @@ USE_TZ = True
 # ─────────────────────────────────────────────
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 

@@ -1,107 +1,118 @@
 {% extends 'base/base.html' %}
 {% block title %}Venta #{{ venta.pk }} — PetPOS Pro{% endblock %}
-{% block page_title %}Comprobante de Venta #{{ venta.pk }}{% endblock %}
+{% block page_title %}Factura / Comprobante de Venta #{{ venta.pk }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-lg-8 col-md-10">
         <div class="card-pos p-4">
             <!-- Encabezado Imprimible -->
-            <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-4" style="border-color: var(--border);">
+            <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-4" style="border-color: var(--border-color) !important;">
                 <div>
-                    <h4 class="fw-bold text-white mb-0">PetPOS Pro</h4>
-                    <small class="text-secondary">Peluquería de Mascotas & Pet Shop</small>
-                    <div class="small text-secondary mt-1"><i class="bi bi-clock me-1"></i>Fecha: {{ venta.fecha|date:"d/m/Y H:i" }}</div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--brand-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                            <i class="bi bi-heart-pulse-fill"></i>
+                        </div>
+                        <h5 class="fw-bold mb-0" style="color: var(--brand-deep);">PetPOS Pro</h5>
+                    </div>
+                    <small class="text-muted d-block">Peluquería de Mascotas & Pet Shop Especializado</small>
+                    <div class="small text-muted mt-1"><i class="bi bi-clock me-1"></i>Fecha de Emisión: <strong>{{ venta.fecha|date:"d/m/Y H:i" }}</strong></div>
                     {% if venta.cliente %}
-                    <div class="small text-info mt-1"><i class="bi bi-person me-1"></i>Cliente: {{ venta.cliente.nombre }} ({{ venta.cliente.telefono }})</div>
+                    <div class="small mt-1" style="color: var(--brand-primary); font-weight: 600;">
+                        <i class="bi bi-person me-1"></i>Cliente: {{ venta.cliente.nombre }} &bull; {{ venta.cliente.telefono }}
+                    </div>
                     {% endif %}
                 </div>
                 <div class="text-end">
                     <span class="badge-pos {% if venta.estado == 'completada' %}badge-success{% else %}badge-danger{% endif %} fs-6 mb-2 d-inline-block">
                         {{ venta.get_estado_display|upper }}
                     </span>
-                    <div class="fs-4 fw-bold text-white">#{{ venta.pk }}</div>
+                    <div class="fs-4 fw-bold" style="color: var(--brand-deep);">Factura #{{ venta.pk }}</div>
                 </div>
             </div>
 
             <!-- Tabla de Productos -->
             {% if detalles %}
-            <h6 class="fw-bold text-white mb-2"><i class="bi bi-box-seam me-1"></i> Productos</h6>
-            <table class="table table-pos mb-4">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Código</th>
-                        <th class="text-center">Cant.</th>
-                        <th class="text-end">Precio</th>
-                        <th class="text-end">Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for d in detalles %}
-                    <tr>
-                        <td class="fw-bold">{{ d.nombre_producto|default:d.producto.nombre }}</td>
-                        <td>{{ d.sku_producto }}</td>
-                        <td class="text-center">{{ d.cantidad }}</td>
-                        <td class="text-end">${{ d.precio_venta|floatformat:0 }}</td>
-                        <td class="text-end fw-bold">${{ d.subtotal|floatformat:0 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <h6 class="fw-bold mb-2" style="color: var(--brand-deep);"><i class="bi bi-box-seam me-1" style="color: var(--brand-primary);"></i> Productos Facturados</h6>
+            <div class="table-responsive-pos mb-4">
+                <table class="table-pos">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Código</th>
+                            <th style="text-align: center;">Cant.</th>
+                            <th style="text-align: right;">Precio</th>
+                            <th style="text-align: right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in detalles %}
+                        <tr>
+                            <td style="font-weight: 600; color: var(--brand-deep);">{{ d.nombre_producto|default:d.producto.nombre }}</td>
+                            <td><span class="badge-pos badge-info">{{ d.sku_producto }}</span></td>
+                            <td style="text-align: center;"><span class="badge-pos badge-accent">{{ d.cantidad }}</span></td>
+                            <td style="text-align: right;">${{ d.precio_venta|floatformat:0 }}</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--brand-deep);">${{ d.subtotal|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% endif %}
 
             <!-- Tabla de Servicios de Peluquería -->
             {% if servicios %}
-            <h6 class="fw-bold text-info mb-2"><i class="bi bi-scissors me-1"></i> Servicios de Peluquería</h6>
-            <table class="table table-pos mb-4">
-                <thead>
-                    <tr>
-                        <th>Servicio</th>
-                        <th>Mascota</th>
-                        <th>Peluquero</th>
-                        <th class="text-end">Cobrado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for s in servicios %}
-                    <tr>
-                        <td class="fw-bold text-info">{{ s.nombre_servicio }}</td>
-                        <td>{{ s.mascota.nombre|default:"Ocasional" }}</td>
-                        <td>{{ s.peluquero.nombre }}</td>
-                        <td class="text-end fw-bold">${{ s.valor_neto|floatformat:0 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <h6 class="fw-bold mb-2" style="color: var(--brand-deep);"><i class="bi bi-scissors me-1" style="color: var(--brand-accent);"></i> Servicios de Peluquería Realizados</h6>
+            <div class="table-responsive-pos mb-4">
+                <table class="table-pos">
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Mascota</th>
+                            <th>Peluquero</th>
+                            <th style="text-align: right;">Valor Cobrado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in servicios %}
+                        <tr>
+                            <td style="font-weight: 700; color: var(--brand-deep);">{{ s.nombre_servicio }}</td>
+                            <td><span class="badge-pos badge-info">{{ s.mascota.nombre|default:"Ocasional" }}</span></td>
+                            <td>{{ s.peluquero.nombre }}</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--brand-primary);">${{ s.valor_neto|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% endif %}
 
             <!-- Desglose de Medios de Pago y Totales -->
-            <div class="row align-items-center border-top pt-3 mb-4" style="border-color: var(--border);">
+            <div class="row align-items-center border-top pt-3 mb-4" style="border-color: var(--border-color) !important;">
                 <div class="col-md-6">
-                    <h6 class="fw-bold text-secondary mb-2">Medios de Pago Aplicados:</h6>
+                    <h6 class="fw-bold mb-2" style="font-size: 12px; text-transform: uppercase; color: var(--text-muted);">Medios de Pago Aplicados:</h6>
                     {% for p in pagos %}
                     <div class="small d-flex justify-content-between mb-1">
-                        <span>{{ p.get_metodo_display }}:</span>
-                        <strong class="text-white">${{ p.monto|floatformat:0 }}</strong>
+                        <span style="color: var(--text-muted);">{{ p.get_metodo_display }}:</span>
+                        <strong style="color: var(--brand-deep);">${{ p.monto|floatformat:0 }}</strong>
                     </div>
                     {% empty %}
-                    <div class="small text-secondary">{{ venta.get_metodo_pago_display }}: ${{ venta.total_venta|floatformat:0 }}</div>
+                    <div class="small" style="color: var(--text-muted);">{{ venta.get_metodo_pago_display }}: ${{ venta.total_venta|floatformat:0 }}</div>
                     {% endfor %}
                 </div>
                 <div class="col-md-6 text-end">
-                    <div class="text-secondary small mb-1">TOTAL VENTA:</div>
-                    <div class="fs-2 fw-bold text-success">${{ venta.total_venta|floatformat:0 }} COP</div>
+                    <div class="text-muted small mb-1" style="font-weight: 700; text-transform: uppercase;">Total Cancelado:</div>
+                    <div class="fs-2 fw-bold" style="color: var(--brand-primary);">${{ venta.total_venta|floatformat:0 }} COP</div>
                 </div>
             </div>
 
             <!-- Botones de Acción -->
-            <div class="d-flex justify-content-between">
-                <a href="{% url 'historial_ventas' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Volver</a>
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{% url 'historial_ventas' %}" class="btn-outline-pos"><i class="bi bi-arrow-left me-1"></i> Volver al Historial</a>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-info" onclick="window.print()"><i class="bi bi-printer me-1"></i> Imprimir</button>
+                    <button class="btn-outline-pos" onclick="window.print()"><i class="bi bi-printer me-1"></i> Imprimir</button>
                     {% if venta.estado == 'completada' %}
-                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalAnular">
+                    <button class="btn-outline-pos" style="color: var(--state-danger); border-color: rgba(217, 56, 58, 0.4);" data-bs-toggle="modal" data-bs-target="#modalAnular">
                         <i class="bi bi-x-circle me-1"></i> Anular Venta
                     </button>
                     {% endif %}
@@ -115,25 +126,25 @@
 {% if venta.estado == 'completada' %}
 <div class="modal fade" id="modalAnular" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--danger); color: #fff;">
-            <div class="modal-header border-bottom" style="border-color: var(--border);">
-                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Anular Venta #{{ venta.pk }}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content" style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div class="modal-header border-bottom" style="border-color: var(--border-color);">
+                <h6 class="modal-title fw-bold" style="color: var(--state-danger);"><i class="bi bi-exclamation-triangle-fill me-2"></i>Anular Venta #{{ venta.pk }}</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{% url 'anular_venta' venta.pk %}" method="post">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <p class="small text-secondary">
-                        Al anular esta venta, el stock de los productos vendidos será devuelto al inventario con un movimiento compensatorio. Si contiene servicios de peluquería que ya fueron liquidados a un peluquero en jornada cerrada, el sistema protegerá la liquidación.
+                    <p class="small text-muted mb-3">
+                        Al anular esta venta, el stock de los productos vendidos será reintegrado al inventario con un movimiento compensatorio auditado.
                     </p>
                     <div class="mb-3">
-                        <label class="form-label small text-secondary">Motivo de Anulación:</label>
+                        <label class="form-label">Motivo de Anulación *</label>
                         <textarea name="motivo" class="form-control" rows="2" placeholder="Ej: Error en método de pago o devolución del cliente" required></textarea>
                     </div>
                 </div>
-                <div class="modal-footer border-top" style="border-color: var(--border);">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Confirmar Anulación</button>
+                <div class="modal-footer border-top" style="border-color: var(--border-color);">
+                    <button type="button" class="btn-outline-pos" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-accent" style="background: var(--state-danger); border: none;">Confirmar Anulación</button>
                 </div>
             </form>
         </div>

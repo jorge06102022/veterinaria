@@ -4,47 +4,47 @@
 
 {% block content %}
 <!-- Acciones Rápidas -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
     <div>
-        <h5 class="fw-bold text-white mb-0">Control de Peluqueros & Grooming</h5>
-        <small class="text-secondary">Cada servicio genera automáticamente el 50% de comisión. Los adelantos reducen el saldo a liquidar.</small>
+        <h5 class="fw-bold mb-1" style="color: var(--brand-deep);">Control de Peluqueros & Grooming</h5>
+        <small class="text-muted">Cada servicio genera automáticamente el 50% de comisión. Los adelantos reducen el saldo a liquidar.</small>
     </div>
     <div class="d-flex gap-2">
-        <a href="{% url 'adelanto_registrar' %}" class="btn btn-warning text-dark fw-bold">
+        <a href="{% url 'adelanto_registrar' %}" class="btn btn-warning text-dark fw-bold btn-sm">
             <i class="bi bi-cash-stack me-1"></i> Entregar Adelanto
         </a>
-        <a href="{% url 'pos' %}" class="btn btn-accent">
-            <i class="bi bi-plus-circle me-1"></i> Nueva Atención (POS)
+        <a href="{% url 'pos' %}" class="btn btn-accent btn-sm">
+            <i class="bi bi-cart-plus me-1"></i> Nueva Atención (POS)
         </a>
     </div>
 </div>
 
-<!-- Listado de Peluqueros y Estado de Liquidación -->
-<div class="row g-4 mb-4">
+<!-- Listado de Peluqueros y Tarjetas de Perfil -->
+<div class="row g-3 mb-4">
     {% for p in peluqueros %}
     <div class="col-md-6">
-        <div class="card-pos h-100 p-4 border-info">
+        <div class="card-pos h-100 p-4" style="border-left: 4px solid var(--brand-primary);">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon info m-0"><i class="bi bi-person-fill"></i></div>
+                    <div class="stat-icon accent m-0"><i class="bi bi-scissors"></i></div>
                     <div>
-                        <h5 class="fw-bold text-white mb-0">{{ p.nombre }}</h5>
-                        <small class="text-secondary"><i class="bi bi-telephone me-1"></i>{{ p.telefono|default:"Sin teléfono" }}</small>
+                        <h5 class="fw-bold mb-0" style="color: var(--brand-deep);">{{ p.nombre }}</h5>
+                        <small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ p.telefono|default:"Sin teléfono" }}</small>
                     </div>
                 </div>
-                <span class="badge-pos badge-info">{{ p.porcentaje_comision_peluqueria }}% Comisión</span>
+                <span class="badge-pos badge-success fs-6">{{ p.porcentaje_comision_peluqueria }}% Comisión</span>
             </div>
 
-            <div class="border-top border-bottom py-3 my-3" style="border-color: var(--border) !important;">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <small class="text-secondary d-block">Rol</small>
-                        <span class="fw-bold">{{ p.get_rol_display }}</span>
+            <div class="border-top border-bottom py-3 my-3" style="border-color: var(--border-color) !important;">
+                <div class="row text-center align-items-center">
+                    <div class="col-6 border-end" style="border-color: var(--border-color) !important;">
+                        <small class="text-muted d-block text-uppercase font-weight-600">Rol</small>
+                        <span class="fw-bold text-dark">{{ p.get_rol_display }}</span>
                     </div>
                     <div class="col-6">
-                        <small class="text-secondary d-block">Acción</small>
-                        <a href="{% url 'liquidacion_jornada' p.pk %}" class="btn btn-accent btn-sm">
-                            <i class="bi bi-receipt me-1"></i> Liquidar Jornada
+                        <small class="text-muted d-block text-uppercase font-weight-600 mb-1">Cierre Diario</small>
+                        <a href="{% url 'liquidacion_jornada' p.pk %}" class="btn btn-accent btn-sm py-1 px-3">
+                            <i class="bi bi-calculator me-1"></i> Liquidar Jornada
                         </a>
                     </div>
                 </div>
@@ -63,118 +63,124 @@
 <!-- Atenciones de la Jornada -->
 <div class="card-pos mb-4">
     <div class="card-pos-header">
-        <span><i class="bi bi-scissors me-2 text-info"></i>Servicios de Peluquería Realizados Hoy ({{ hoy|date:"d/m/Y" }})</span>
+        <span><i class="bi bi-scissors me-2" style="color: var(--brand-primary);"></i>Servicios de Peluquería Realizados Hoy ({{ hoy|date:"d/m/Y" }})</span>
     </div>
     <div class="card-pos-body p-0">
-        <table class="table table-pos mb-0">
-            <thead>
-                <tr>
-                    <th>Hora</th>
-                    <th>Servicio</th>
-                    <th>Mascota</th>
-                    <th>Peluquero</th>
-                    <th class="text-end">Cobrado</th>
-                    <th class="text-end text-warning">Comisión Peluquero (50%)</th>
-                    <th class="text-end text-success">Parte Negocio</th>
-                    <th>Estado Liq.</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for a in atenciones_hoy %}
-                <tr>
-                    <td>{{ a.fecha|date:"H:i" }}</td>
-                    <td class="fw-bold">{{ a.nombre_servicio }}</td>
-                    <td>{{ a.mascota.nombre|default:"Ocasional" }}</td>
-                    <td>{{ a.peluquero.nombre }}</td>
-                    <td class="text-end">${{ a.valor_neto|floatformat:0 }}</td>
-                    <td class="text-end fw-bold text-warning">${{ a.comision_calculada|floatformat:0 }}</td>
-                    <td class="text-end fw-bold text-success">${{ a.parte_negocio|floatformat:0 }}</td>
-                    <td>
-                        <span class="badge-pos {% if a.estado_liquidacion == 'liquidado' %}badge-success{% elif a.estado_liquidacion == 'pendiente' %}badge-warning{% else %}badge-danger{% endif %}">
-                            {{ a.get_estado_liquidacion_display }}
-                        </span>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="8" class="text-center text-muted py-4">No hay servicios de peluquería registrados hoy.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive-pos">
+            <table class="table table-pos mb-0">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Servicio</th>
+                        <th>Mascota</th>
+                        <th>Peluquero</th>
+                        <th class="text-end">Cobrado</th>
+                        <th class="text-end" style="color: #B56507;">Comisión Peluquero (50%)</th>
+                        <th class="text-end text-success">Parte Negocio</th>
+                        <th>Estado Liq.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in atenciones_hoy %}
+                    <tr>
+                        <td>{{ a.fecha|date:"H:i" }}</td>
+                        <td class="fw-bold" style="color: var(--brand-deep);">{{ a.nombre_servicio }}</td>
+                        <td>{{ a.mascota.nombre|default:"Ocasional" }}</td>
+                        <td>{{ a.peluquero.nombre }}</td>
+                        <td class="text-end">${{ a.valor_neto|floatformat:0 }}</td>
+                        <td class="text-end fw-bold" style="color: #B56507;">${{ a.comision_calculada|floatformat:0 }}</td>
+                        <td class="text-end fw-bold text-success">${{ a.parte_negocio|floatformat:0 }}</td>
+                        <td>
+                            <span class="badge-pos {% if a.estado_liquidacion == 'liquidado' %}badge-success{% elif a.estado_liquidacion == 'pendiente' %}badge-warning{% else %}badge-danger{% endif %}">
+                                {{ a.get_estado_liquidacion_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">No hay servicios de peluquería registrados hoy.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <!-- Adelantos y Liquidaciones Recientes -->
 <div class="row g-4">
     <div class="col-md-6">
-        <div class="card-pos">
+        <div class="card-pos h-100">
             <div class="card-pos-header">
-                <span><i class="bi bi-cash me-2 text-warning"></i>Adelantos de Dinero Entregados Hoy</span>
+                <span><i class="bi bi-cash me-2" style="color: var(--state-warning);"></i>Adelantos de Dinero Entregados Hoy</span>
             </div>
             <div class="card-pos-body p-0">
-                <table class="table table-pos mb-0">
-                    <thead>
-                        <tr>
-                            <th>Hora</th>
-                            <th>Peluquero</th>
-                            <th>Monto</th>
-                            <th>Medio</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for ad in adelantos_hoy %}
-                        <tr>
-                            <td>{{ ad.fecha|date:"H:i" }}</td>
-                            <td>{{ ad.peluquero.nombre }}</td>
-                            <td class="fw-bold text-warning">${{ ad.monto|floatformat:0 }}</td>
-                            <td>{{ ad.get_medio_entrega_display }}</td>
-                            <td>
-                                <span class="badge-pos {% if ad.estado == 'imputado' %}badge-success{% else %}badge-warning{% endif %}">
-                                    {{ ad.get_estado_display }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5" class="text-center text-muted py-3">No hay adelantos entregados hoy.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-responsive-pos">
+                    <table class="table table-pos mb-0">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Peluquero</th>
+                                <th>Monto</th>
+                                <th>Medio</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ad in adelantos_hoy %}
+                            <tr>
+                                <td>{{ ad.fecha|date:"H:i" }}</td>
+                                <td class="fw-bold">{{ ad.peluquero.nombre }}</td>
+                                <td class="fw-bold" style="color: #B56507;">${{ ad.monto|floatformat:0 }}</td>
+                                <td>{{ ad.get_medio_entrega_display }}</td>
+                                <td>
+                                    <span class="badge-pos {% if ad.estado == 'imputado' %}badge-success{% else %}badge-warning{% endif %}">
+                                        {{ ad.get_estado_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No hay adelantos entregados hoy.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="col-md-6">
-        <div class="card-pos">
+        <div class="card-pos h-100">
             <div class="card-pos-header">
-                <span><i class="bi bi-journal-check me-2"></i>Historial de Liquidaciones</span>
+                <span><i class="bi bi-journal-check me-2 text-muted"></i>Historial de Liquidaciones</span>
             </div>
             <div class="card-pos-body p-0">
-                <table class="table table-pos mb-0">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Peluquero</th>
-                            <th>Comisión</th>
-                            <th>Adelantos</th>
-                            <th class="text-end">Saldo Pendiente</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for l in liquidaciones_recientes %}
-                        <tr>
-                            <td>{{ l.fecha_jornada|date:"d/m/Y" }}</td>
-                            <td>{{ l.peluquero.nombre }}</td>
-                            <td>${{ l.total_comision|floatformat:0 }}</td>
-                            <td class="text-danger">-${{ l.total_adelantos|floatformat:0 }}</td>
-                            <td class="text-end fw-bold {% if l.saldo_pendiente > 0 %}text-warning{% else %}text-success{% endif %}">
-                                ${{ l.saldo_pendiente|floatformat:0 }}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5" class="text-center text-muted py-3">No hay liquidaciones registradas aún.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-responsive-pos">
+                    <table class="table table-pos mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Peluquero</th>
+                                <th>Comisión</th>
+                                <th>Adelantos</th>
+                                <th class="text-end">Saldo Pendiente</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in liquidaciones_recientes %}
+                            <tr>
+                                <td>{{ l.fecha_jornada|date:"d/m/Y" }}</td>
+                                <td class="fw-bold">{{ l.peluquero.nombre }}</td>
+                                <td>${{ l.total_comision|floatformat:0 }}</td>
+                                <td class="text-danger">-${{ l.total_adelantos|floatformat:0 }}</td>
+                                <td class="text-end fw-bold {% if l.saldo_pendiente > 0 %}text-warning{% else %}text-success{% endif %}">
+                                    ${{ l.saldo_pendiente|floatformat:0 }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No hay liquidaciones registradas aún.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

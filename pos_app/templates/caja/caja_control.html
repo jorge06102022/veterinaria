@@ -7,34 +7,34 @@
     <!-- Estado y Operaciones de Caja -->
     <div class="col-md-5">
         {% if caja_activa %}
-        <div class="card-pos border-success p-4">
+        <div class="card-pos p-4 h-100" style="border-top: 4px solid var(--brand-primary);">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <span class="badge-pos badge-success fs-6"><i class="bi bi-unlock-fill me-1"></i> Sesión Abierta #{{ caja_activa.pk }}</span>
-                <span class="text-secondary small">{{ caja_activa.fecha_apertura|date:"d/m/Y H:i" }}</span>
+                <span class="text-muted small">{{ caja_activa.fecha_apertura|date:"d/m/Y H:i" }}</span>
             </div>
             <div class="mb-3">
-                <div class="small text-secondary">Apertura realizada por:</div>
-                <div class="fw-bold">{{ caja_activa.usuario_apertura.username|default:"Administrador" }}</div>
+                <div class="small text-muted">Apertura realizada por:</div>
+                <div class="fw-bold" style="color: var(--brand-deep);">{{ caja_activa.usuario_apertura.username|default:"Administrador" }}</div>
             </div>
             <div class="mb-4">
-                <div class="small text-secondary">Efectivo Inicial (Base de Caja):</div>
-                <div class="fs-4 fw-bold text-white">${{ caja_activa.monto_inicial_efectivo|floatformat:0 }} COP</div>
+                <div class="small text-muted">Efectivo Inicial (Base de Gaveta):</div>
+                <div class="fs-3 fw-bold text-success">${{ caja_activa.monto_inicial_efectivo|floatformat:0 }} COP</div>
             </div>
 
             <!-- Formulario de Cierre de Caja Ciego/Comparativo -->
-            <div class="border-top pt-3" style="border-color: var(--border);">
-                <h6 class="fw-bold text-warning mb-2"><i class="bi bi-calculator me-1"></i> Arqueo y Cierre de Jornada</h6>
-                <p class="small text-secondary mb-3">
-                    Cuenta el dinero físico que hay en la gaveta y digítalo a continuación. El sistema comparará tu conteo contra el efectivo esperado y calculará si existe sobrante o faltante.
+            <div class="border-top pt-3" style="border-color: var(--border-color);">
+                <h6 class="fw-bold mb-2" style="color: var(--brand-deep);"><i class="bi bi-calculator me-1" style="color: var(--brand-primary);"></i> Arqueo y Cierre de Jornada</h6>
+                <p class="small text-muted mb-3">
+                    Cuenta el dinero físico que hay en la gaveta y digítalo a continuación. El sistema comparará tu conteo contra el efectivo esperado y registrará diferencias.
                 </p>
                 <form action="{% url 'caja_cerrar' %}" method="post">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label small text-secondary">Efectivo Físico Contado ($):</label>
+                        <label class="form-label small text-muted font-weight-600">Efectivo Físico Contado ($ COP):</label>
                         {{ form_cierre.efectivo_real }}
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small text-secondary">Observaciones de Cierre (Opcional):</label>
+                        <label class="form-label small text-muted font-weight-600">Observaciones de Cierre (Opcional):</label>
                         {{ form_cierre.observaciones }}
                     </div>
                     <button type="submit" class="btn btn-danger w-100 py-2 fw-bold" onclick="return confirm('¿Seguro que deseas cerrar la caja del día? Esta operación congelará los movimientos de esta sesión.');">
@@ -44,20 +44,20 @@
             </div>
         </div>
         {% else %}
-        <div class="card-pos border-warning p-4">
-            <div class="text-center mb-3">
-                <div class="fs-1 text-warning mb-2"><i class="bi bi-safe"></i></div>
-                <h5 class="fw-bold text-white">No hay ninguna caja abierta</h5>
-                <p class="small text-secondary">Inicia una nueva jornada definiendo la base de efectivo inicial en gaveta.</p>
+        <div class="card-pos p-4 text-center h-100" style="border-top: 4px solid var(--state-warning);">
+            <div class="my-3">
+                <div class="fs-1 text-warning mb-2"><i class="bi bi-safe2"></i></div>
+                <h5 class="fw-bold" style="color: var(--brand-deep);">No hay ninguna caja abierta</h5>
+                <p class="small text-muted">Inicia una nueva jornada definiendo la base de efectivo inicial en gaveta.</p>
             </div>
-            <form action="{% url 'caja_abrir' %}" method="post">
+            <form action="{% url 'caja_abrir' %}" method="post" class="text-start">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Base / Efectivo Inicial ($):</label>
+                    <label class="form-label small text-muted font-weight-600">Base / Efectivo Inicial ($):</label>
                     {{ form_apertura.monto_inicial }}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Observaciones:</label>
+                    <label class="form-label small text-muted font-weight-600">Observaciones:</label>
                     {{ form_apertura.observaciones }}
                 </div>
                 <button type="submit" class="btn btn-accent w-100 py-2 fw-bold">
@@ -73,69 +73,69 @@
         {% if datos %}
         <div class="card-pos h-100">
             <div class="card-pos-header">
-                <span><i class="bi bi-cash-coin me-2 text-success"></i>Arqueo de Fondos en Tiempo Real</span>
+                <span><i class="bi bi-cash-coin me-2" style="color: var(--brand-primary);"></i>Arqueo de Fondos en Tiempo Real</span>
             </div>
             <div class="card-pos-body p-4">
                 <!-- Columna 1: Efectivo Físico -->
-                <div class="p-3 rounded mb-4" style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2);">
+                <div class="p-3 rounded mb-4" style="background: #F8FAF9; border: 1px solid var(--border-color);">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="fw-bold text-success mb-0"><i class="bi bi-cash me-1"></i> MOVIMIENTOS EN EFECTIVO FÍSICO</h6>
                         <span class="badge-pos badge-success">Gaveta</span>
                     </div>
-                    <table class="table table-sm table-borderless text-light mb-0">
+                    <table class="table table-sm table-borderless mb-0">
                         <tr>
-                            <td>(+) Base Inicial en Caja:</td>
-                            <td class="text-end fw-bold">${{ caja_activa.monto_inicial_efectivo|floatformat:0 }}</td>
+                            <td class="text-muted">(+) Base Inicial en Gaveta:</td>
+                            <td class="text-end fw-bold text-dark">${{ caja_activa.monto_inicial_efectivo|floatformat:0 }}</td>
                         </tr>
                         <tr>
-                            <td>(+) Ventas cobradas en Efectivo:</td>
+                            <td class="text-muted">(+) Ventas cobradas en Efectivo:</td>
                             <td class="text-end text-success fw-bold">+${{ datos.ventas_efectivo|floatformat:0 }}</td>
                         </tr>
                         <tr>
-                            <td>(−) Egresos y gastos pagados en Efectivo:</td>
+                            <td class="text-muted">(−) Egresos y gastos pagados en Efectivo:</td>
                             <td class="text-end text-danger fw-bold">-${{ datos.egresos_efectivo|floatformat:0 }}</td>
                         </tr>
                         <tr>
-                            <td>(−) Adelantos a Peluqueros entregados en Efectivo:</td>
+                            <td class="text-muted">(−) Adelantos a Peluqueros en Efectivo:</td>
                             <td class="text-end text-danger fw-bold">-${{ datos.adelantos_efectivo|floatformat:0 }}</td>
                         </tr>
                         <tr>
-                            <td>(−) Pagos finales de liquidación en Efectivo:</td>
+                            <td class="text-muted">(−) Pagos finales de liquidación en Efectivo:</td>
                             <td class="text-end text-danger fw-bold">-${{ datos.pagos_peluquero_efectivo|floatformat:0 }}</td>
                         </tr>
-                        <tr class="border-top" style="border-color: var(--border) !important;">
-                            <td class="fs-5 fw-bold text-white pt-2">(=) EFECTIVO ESPERADO EN GAVETA:</td>
+                        <tr class="border-top" style="border-color: var(--border-color) !important;">
+                            <td class="fs-6 fw-bold pt-2" style="color: var(--brand-deep);">(=) EFECTIVO ESPERADO EN GAVETA:</td>
                             <td class="text-end fs-4 fw-bold text-success pt-2">${{ datos.efectivo_esperado|floatformat:0 }}</td>
                         </tr>
                     </table>
                 </div>
 
                 <!-- Columna 2: Medios Bancarios y Electrónicos -->
-                <div class="p-3 rounded" style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2);">
+                <div class="p-3 rounded" style="background: #F8FAF9; border: 1px solid var(--border-color);">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold text-info mb-0"><i class="bi bi-bank me-1"></i> MOVIMIENTOS BANCARIOS (Nequi / Daviplata / Tarjeta)</h6>
+                        <h6 class="fw-bold mb-0" style="color: var(--brand-deep);"><i class="bi bi-bank me-1"></i> MOVIMIENTOS BANCARIOS (Nequi / Daviplata / Tarjeta)</h6>
                         <span class="badge-pos badge-info">Cuentas Bancarias</span>
                     </div>
-                    <table class="table table-sm table-borderless text-light mb-0">
+                    <table class="table table-sm table-borderless mb-0">
                         <tr>
-                            <td>(+) Ventas cobradas por Transferencia:</td>
-                            <td class="text-end text-info fw-bold">+${{ datos.ventas_transferencia|floatformat:0 }}</td>
+                            <td class="text-muted">(+) Ventas por Transferencia:</td>
+                            <td class="text-end fw-bold" style="color: var(--brand-deep);">+${{ datos.ventas_transferencia|floatformat:0 }}</td>
                         </tr>
                         <tr>
-                            <td>(+) Ventas cobradas con Tarjeta / Electrónico:</td>
-                            <td class="text-end text-info fw-bold">+${{ datos.ventas_tarjeta|floatformat:0 }}</td>
+                            <td class="text-muted">(+) Ventas cobradas con Tarjeta:</td>
+                            <td class="text-end fw-bold" style="color: var(--brand-deep);">+${{ datos.ventas_tarjeta|floatformat:0 }}</td>
                         </tr>
                         <tr>
-                            <td>(−) Egresos y nómina pagados por Banco:</td>
+                            <td class="text-muted">(−) Egresos y nómina pagados por Banco:</td>
                             <td class="text-end text-danger fw-bold">-${{ datos.egresos_banco|floatformat:0 }}</td>
                         </tr>
                         <tr>
-                            <td>(−) Adelantos y pagos a Peluquero por Banco:</td>
+                            <td class="text-muted">(−) Adelantos y pagos a Peluquero por Banco:</td>
                             <td class="text-end text-danger fw-bold">-${{ datos.adelantos_banco|floatformat:0 }}</td>
                         </tr>
-                        <tr class="border-top" style="border-color: var(--border) !important;">
-                            <td class="fs-5 fw-bold text-white pt-2">(=) TOTAL NETO INGRESADO A BANCOS:</td>
-                            <td class="text-end fs-4 fw-bold text-info pt-2">${{ datos.banco_neto|floatformat:0 }}</td>
+                        <tr class="border-top" style="border-color: var(--border-color) !important;">
+                            <td class="fs-6 fw-bold pt-2" style="color: var(--brand-deep);">(=) TOTAL NETO INGRESADO A BANCOS:</td>
+                            <td class="text-end fs-4 fw-bold pt-2" style="color: var(--brand-deep);">${{ datos.banco_neto|floatformat:0 }}</td>
                         </tr>
                     </table>
                 </div>
@@ -153,49 +153,51 @@
 <!-- Historial de Cierres Anteriores -->
 <div class="card-pos">
     <div class="card-pos-header">
-        <span><i class="bi bi-archive-fill me-2"></i>Historial de Cierres de Caja Anteriores</span>
+        <span><i class="bi bi-archive-fill me-2 text-muted"></i>Historial de Cierres de Caja Anteriores</span>
     </div>
     <div class="card-pos-body p-0">
-        <table class="table table-pos mb-0">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Apertura</th>
-                    <th>Cierre</th>
-                    <th>Base</th>
-                    <th>Esperado Ef.</th>
-                    <th>Contado Real</th>
-                    <th>Diferencia</th>
-                    <th>Banco</th>
-                    <th>Cerrado por</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in historial_cajas %}
-                <tr>
-                    <td>#{{ c.pk }}</td>
-                    <td>{{ c.fecha_apertura|date:"d/m/Y H:i" }}</td>
-                    <td>{{ c.fecha_cierre|date:"d/m/Y H:i" }}</td>
-                    <td>${{ c.monto_inicial_efectivo|floatformat:0 }}</td>
-                    <td>${{ c.efectivo_esperado|floatformat:0 }}</td>
-                    <td class="fw-bold">${{ c.efectivo_real|floatformat:0 }}</td>
-                    <td>
-                        {% if c.diferencia_efectivo == 0 %}
-                        <span class="badge-pos badge-success">Exacto ($0)</span>
-                        {% elif c.diferencia_efectivo > 0 %}
-                        <span class="badge-pos badge-info">+${{ c.diferencia_efectivo|floatformat:0 }} Sobrante</span>
-                        {% else %}
-                        <span class="badge-pos badge-danger">-${{ c.diferencia_efectivo|abs|floatformat:0 }} Faltante</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-info">${{ c.banco_esperado|floatformat:0 }}</td>
-                    <td>{{ c.usuario_cierre.username|default:"Admin" }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="9" class="text-center text-muted py-4">No hay cierres registrados aún.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive-pos">
+            <table class="table table-pos mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Apertura</th>
+                        <th>Cierre</th>
+                        <th>Base Inicial</th>
+                        <th>Esperado Ef.</th>
+                        <th>Contado Real</th>
+                        <th>Diferencia</th>
+                        <th>Bancos</th>
+                        <th>Cerrado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in historial_cajas %}
+                    <tr>
+                        <td><span class="badge-pos badge-accent">#{{ c.pk }}</span></td>
+                        <td>{{ c.fecha_apertura|date:"d/m/Y H:i" }}</td>
+                        <td>{{ c.fecha_cierre|date:"d/m/Y H:i" }}</td>
+                        <td>${{ c.monto_inicial_efectivo|floatformat:0 }}</td>
+                        <td>${{ c.efectivo_esperado|floatformat:0 }}</td>
+                        <td class="fw-bold" style="color: var(--brand-deep);">${{ c.efectivo_real|floatformat:0 }}</td>
+                        <td>
+                            {% if c.diferencia_efectivo == 0 %}
+                            <span class="badge-pos badge-success"><i class="bi bi-check-circle me-1"></i>Exacto ($0)</span>
+                            {% elif c.diferencia_efectivo > 0 %}
+                            <span class="badge-pos badge-info">+${{ c.diferencia_efectivo|floatformat:0 }} Sobrante</span>
+                            {% else %}
+                            <span class="badge-pos badge-danger">${{ c.diferencia_efectivo|floatformat:0 }} Faltante</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold" style="color: var(--brand-deep);">${{ c.banco_esperado|floatformat:0 }}</td>
+                        <td>{{ c.usuario_cierre.username|default:"Admin" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No hay cierres registrados aún.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -4,38 +4,51 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-lg-6 col-md-8">
         <div class="card-pos p-4">
-            <h5 class="fw-bold text-white mb-3">{{ titulo }}</h5>
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--brand-glow); color: var(--brand-primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <h6 class="fw-bold mb-0" style="color: var(--brand-deep);">{{ titulo }}</h6>
+            </div>
+
             <form method="post">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Nombre Completo:</label>
+                    <label class="form-label">Nombre Completo *</label>
                     {{ form.nombre }}
+                    {% if form.nombre.errors %}<div class="text-danger small mt-1">{{ form.nombre.errors.0 }}</div>{% endif %}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Teléfono / WhatsApp:</label>
+                    <label class="form-label">Teléfono / WhatsApp *</label>
                     {{ form.telefono }}
+                    {% if form.telefono.errors %}<div class="text-danger small mt-1">{{ form.telefono.errors.0 }}</div>{% endif %}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Cédula / Documento (Opcional):</label>
+                    <label class="form-label">Cédula / Documento (Opcional)</label>
                     {{ form.documento }}
+                    {% if form.documento.errors %}<div class="text-danger small mt-1">{{ form.documento.errors.0 }}</div>{% endif %}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Dirección (Opcional):</label>
+                    <label class="form-label">Dirección (Opcional)</label>
                     {{ form.direccion }}
+                    {% if form.direccion.errors %}<div class="text-danger small mt-1">{{ form.direccion.errors.0 }}</div>{% endif %}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Correo Electrónico (Opcional):</label>
+                    <label class="form-label">Correo Electrónico (Opcional)</label>
                     {{ form.email }}
+                    {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}
                 </div>
                 <div class="mb-4">
-                    <label class="form-label small text-secondary">Observaciones:</label>
+                    <label class="form-label">Observaciones y Preferencias</label>
                     {{ form.observaciones }}
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{% url 'clientes_list' %}" class="btn btn-outline-secondary w-50">Cancelar</a>
-                    <button type="submit" class="btn btn-accent w-50">Guardar Cliente</button>
+                    <a href="{% url 'clientes_list' %}" class="btn-outline-pos w-50 justify-content-center">Cancelar</a>
+                    <button type="submit" class="btn-accent w-50 justify-content-center">
+                        <i class="bi bi-check-lg me-1"></i> Guardar Cliente
+                    </button>
                 </div>
             </form>
         </div>

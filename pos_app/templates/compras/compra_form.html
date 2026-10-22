@@ -4,16 +4,25 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-9">
+    <div class="col-lg-10 col-md-11">
         <div class="card-pos p-4">
-            <h5 class="fw-bold text-white mb-3"><i class="bi bi-cart-check me-2 text-info"></i>Recepción de Mercancía</h5>
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--brand-glow); color: var(--brand-primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="bi bi-cart-check"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0" style="color: var(--brand-deep);">Recepción de Mercancía y Factura de Proveedor</h6>
+                    <small class="text-muted">Afecta automáticamente las existencias de inventario</small>
+                </div>
+            </div>
+
             <form method="post" id="formCompra">
                 {% csrf_token %}
                 <input type="hidden" name="items_json" id="itemsJson">
                 
                 <div class="row g-3 mb-4">
                     <div class="col-md-5">
-                        <label class="form-label small text-secondary">Proveedor:</label>
+                        <label class="form-label">Proveedor *</label>
                         <select name="proveedor" class="form-select" required>
                             <option value="">Seleccione proveedor...</option>
                             {% for p in proveedores %}
@@ -22,25 +31,27 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small text-secondary">N° Factura Proveedor:</label>
-                        <input type="text" name="numero_factura" class="form-control" placeholder="FAC-1234">
+                        <label class="form-label">N° Factura Proveedor</label>
+                        <input type="text" name="numero_factura" class="form-control" placeholder="Ej: FAC-1024">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small text-secondary">Método de Pago:</label>
+                        <label class="form-label">Método de Pago</label>
                         <select name="metodo_pago" class="form-select">
-                            <option value="efectivo">Efectivo (Afecta Caja)</option>
+                            <option value="efectivo">Efectivo (Registra egreso en caja)</option>
                             <option value="transferencia">Transferencia Bancaria</option>
                             <option value="credito">A Crédito / Pendiente</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Agregar Producto -->
-                <div class="p-3 rounded mb-4" style="background: var(--bg-app); border: 1px solid var(--border);">
-                    <h6 class="fw-bold text-white mb-3">Agregar Productos Comprados</h6>
+                <!-- Panel para agregar Producto -->
+                <div style="background: #F8FAF9; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 18px; margin-bottom: 24px;">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--brand-deep); margin-bottom: 12px;">
+                        <i class="bi bi-plus-circle me-1" style="color: var(--brand-primary);"></i>Agregar Producto a la Factura
+                    </div>
                     <div class="row g-2 align-items-end">
                         <div class="col-md-5">
-                            <label class="small text-secondary">Producto:</label>
+                            <label class="form-label mb-1" style="font-size: 11px;">Producto</label>
                             <select id="selProducto" class="form-select">
                                 <option value="">Seleccione producto...</option>
                                 {% for pr in productos %}
@@ -49,45 +60,47 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label class="small text-secondary">Cantidad:</label>
+                            <label class="form-label mb-1" style="font-size: 11px;">Cantidad</label>
                             <input type="number" id="cantProducto" class="form-control" value="1" min="1">
                         </div>
                         <div class="col-md-3">
-                            <label class="small text-secondary">Costo Unitario ($):</label>
+                            <label class="form-label mb-1" style="font-size: 11px;">Costo Unitario ($)</label>
                             <input type="number" id="costoProducto" class="form-control" step="100">
                         </div>
                         <div class="col-md-2">
-                            <button type="button" class="btn btn-outline-info w-100" onclick="agregarItemCompra()">
-                                <i class="bi bi-plus-lg"></i> Agregar
+                            <button type="button" class="btn-outline-pos w-100 justify-content-center" onclick="agregarItemCompra()" style="padding: 9px 12px;">
+                                <i class="bi bi-plus-lg me-1"></i> Agregar
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tabla de Items -->
-                <table class="table table-pos mb-3">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th class="text-center">Cantidad</th>
-                            <th class="text-end">Costo Unit.</th>
-                            <th class="text-end">Subtotal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaItemsCompra">
-                        <tr><td colspan="5" class="text-center text-muted py-3">No hay productos agregados a la compra.</td></tr>
-                    </tbody>
-                </table>
-
-                <div class="d-flex justify-content-between align-items-center border-top pt-3 mb-4" style="border-color: var(--border);">
-                    <span class="fs-5 fw-bold text-secondary">TOTAL COMPRA:</span>
-                    <span class="fs-4 fw-bold text-success" id="txtTotalCompra">$0</span>
+                <!-- Tabla de Items de Compra -->
+                <div class="table-responsive-pos mb-4">
+                    <table class="table-pos">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th style="text-align: center;">Cantidad</th>
+                                <th style="text-align: right;">Costo Unit.</th>
+                                <th style="text-align: right;">Subtotal</th>
+                                <th style="text-align: center; width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaItemsCompra">
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No hay productos agregados a la compra aún.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                <div class="d-flex gap-2">
-                    <a href="{% url 'compras_list' %}" class="btn btn-outline-secondary w-50">Cancelar</a>
-                    <button type="submit" class="btn btn-accent w-50 py-2 fw-bold" onclick="return prepararEnvioCompra()">
+                <div class="d-flex justify-content-between align-items-center border-top pt-3 mb-4" style="border-color: var(--border-color) !important;">
+                    <span style="font-size: 14px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Factura de Compra:</span>
+                    <span style="font-size: 24px; font-weight: 800; color: var(--brand-primary);" id="txtTotalCompra">$0</span>
+                </div>
+
+                <div class="d-flex gap-3">
+                    <a href="{% url 'compras_list' %}" class="btn-outline-pos w-50 justify-content-center">Cancelar</a>
+                    <button type="submit" class="btn-accent w-50 justify-content-center py-2" onclick="return prepararEnvioCompra()">
                         <i class="bi bi-check-lg me-1"></i> Confirmar Entrada de Compra
                     </button>
                 </div>
@@ -139,7 +152,7 @@
     function renderTablaCompra() {
         const tbody = document.getElementById('tablaItemsCompra');
         if (itemsCompra.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No hay productos agregados a la compra.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No hay productos agregados a la compra aún.</td></tr>';
             document.getElementById('txtTotalCompra').textContent = '$0';
             return;
         }
@@ -150,11 +163,11 @@
             tot += it.subtotal;
             html += `
                 <tr>
-                    <td>${it.nombre}</td>
-                    <td class="text-center">${it.cantidad}</td>
-                    <td class="text-end">$${it.costo_unitario.toLocaleString('es-CO')}</td>
-                    <td class="text-end fw-bold">$${it.subtotal.toLocaleString('es-CO')}</td>
-                    <td class="text-end"><button type="button" class="btn btn-sm text-danger p-0" onclick="eliminarItemCompra(${idx})"><i class="bi bi-x-circle"></i></button></td>
+                    <td style="font-weight: 600; color: var(--brand-deep);">${it.nombre}</td>
+                    <td style="text-align: center;"><span class="badge-pos badge-info">${it.cantidad}</span></td>
+                    <td style="text-align: right;">$${it.costo_unitario.toLocaleString('es-CO')}</td>
+                    <td style="text-align: right; font-weight: 700; color: var(--brand-deep);">$${it.subtotal.toLocaleString('es-CO')}</td>
+                    <td style="text-align: center;"><button type="button" class="btn-outline-pos p-1" style="color: var(--state-danger); border-color: transparent;" onclick="eliminarItemCompra(${idx})"><i class="bi bi-x-circle-fill"></i></button></td>
                 </tr>
             `;
         });

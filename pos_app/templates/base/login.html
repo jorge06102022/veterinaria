@@ -3,365 +3,388 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NexSales — Iniciar Sesión</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
+<title>PetPOS Pro — Iniciar Sesión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+{% load static %}
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Inter',sans-serif;background:#000;color:#fff;overflow:hidden}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --brand-primary: #239B72;
+    --brand-primary-hover: #1e8763;
+    --brand-dark: #176B50;
+    --brand-deep: #173B4D;
+    --brand-accent: #58BFA5;
+    --bg-main: #F5F8F7;
+    --text-dark: #24343D;
+    --text-muted: #718096;
+    --border-subtle: #E2EAE7;
+  }
 
-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+  body {
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
 
-.wrap{
-  position:relative;z-index:10;
-  display:flex;min-height:100vh;
-}
+  .login-card {
+    width: 100%;
+    max-width: 1080px;
+    min-height: 620px;
+    background: #FFFFFF;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(23, 59, 77, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+  }
 
-/* ── LEFT ── */
-.left{
-  flex:1;
-  display:flex;flex-direction:column;justify-content:space-between;
-  padding:56px 60px;
-  border-right:1px solid rgba(255,255,255,0.06);
-}
+  /* ── LADO VISUAL (IZQUIERDA) ── */
+  .visual-pane {
+    flex: 1.15;
+    position: relative;
+    background: url("{% static 'img/login-pets.jpg' %}") center center / cover no-repeat;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 48px;
+    color: #FFFFFF;
+  }
 
-.logo{display:flex;align-items:center;gap:12px}
-.logo-mark{
-  width:36px;height:36px;border-radius:10px;
-  background:#fff;
-  display:flex;align-items:center;justify-content:center;
-}
-.logo-mark svg{width:20px;height:20px}
-.logo-name{font-size:15px;font-weight:700;letter-spacing:-.3px;color:#fff}
+  .visual-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(145deg, rgba(23, 59, 77, 0.85) 0%, rgba(23, 107, 80, 0.75) 55%, rgba(35, 155, 114, 0.6) 100%);
+    z-index: 1;
+  }
 
-.hero{display:flex;flex-direction:column;gap:24px}
-.hero h1{
-  font-size:clamp(40px,4.5vw,68px);
-  font-weight:900;
-  letter-spacing:-3px;
-  line-height:.95;
-  color:#fff;
-}
-.hero h1 span{color:rgba(255,255,255,.22)}
-.hero p{
-  font-size:14px;color:rgba(255,255,255,.45);
-  line-height:1.7;max-width:340px;font-weight:400;
-}
+  .visual-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
 
-.stats{
-  display:flex;gap:0;
-  border-top:1px solid rgba(255,255,255,0.07);
-  padding-top:32px;
-}
-.stat{flex:1;display:flex;flex-direction:column;gap:4px;padding-right:28px}
-.stat:not(:last-child){
-  border-right:1px solid rgba(255,255,255,.07);
-  margin-right:28px;
-}
-.stat .n{font-size:28px;font-weight:700;letter-spacing:-1px;color:#fff}
-.stat .n.g{color:#4ade80}
-.stat .l{
-  font-size:10px;color:rgba(255,255,255,.3);
-  text-transform:uppercase;letter-spacing:.1em;margin-top:2px;
-}
+  .brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 8px 16px;
+    border-radius: 100px;
+    width: fit-content;
+  }
 
-/* ── RIGHT ── */
-.right{
-  width:480px;flex-shrink:0;
-  display:flex;flex-direction:column;justify-content:center;
-  padding:60px 56px;
-  position:relative;
-  background:rgba(255,255,255,.015);
-}
-.right::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.1) 50%,transparent);
-}
+  .brand-badge i { font-size: 18px; color: #58BFA5; }
+  .brand-badge span { font-size: 14px; font-weight: 700; letter-spacing: 0.3px; color: #FFFFFF; }
 
-.form-head{margin-bottom:44px}
-.form-head .tag{
-  font-size:10px;font-weight:600;
-  letter-spacing:.15em;text-transform:uppercase;
-  color:rgba(255,255,255,.3);margin-bottom:16px;
-}
-.form-head h2{
-  font-size:28px;font-weight:700;
-  letter-spacing:-.8px;color:#fff;line-height:1.1;
-}
-.form-head h2 span{color:rgba(255,255,255,.3)}
+  .hero-quote {
+    max-width: 420px;
+  }
 
-.error-bar{
-  display:flex;align-items:center;gap:8px;
-  background:rgba(239,68,68,.08);
-  border:1px solid rgba(239,68,68,.2);
-  border-radius:10px;padding:10px 14px;
-  font-size:12px;color:#f87171;margin-bottom:20px;
-}
-.error-dot{width:5px;height:5px;border-radius:50%;background:#f87171;flex-shrink:0}
+  .hero-quote h1 {
+    font-size: 38px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    letter-spacing: -0.8px;
+  }
 
-.field{margin-bottom:16px}
-.field-label{
-  font-size:11px;font-weight:600;
-  letter-spacing:.08em;text-transform:uppercase;
-  color:rgba(255,255,255,.35);margin-bottom:8px;
-}
-.input-shell{position:relative;display:flex;align-items:center}
-.input-shell input{
-  width:100%;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.09);
-  color:#fff;border-radius:12px;
-  padding:14px 44px 14px 16px;
-  font-size:14px;font-family:'Inter',sans-serif;font-weight:400;
-  outline:none;
-  transition:border-color .2s,background .2s;
-}
-.input-shell input::placeholder{color:rgba(255,255,255,.2)}
-.input-shell input:focus{
-  border-color:rgba(255,255,255,.28);
-  background:rgba(255,255,255,.07);
-}
-.input-shell .ic{
-  position:absolute;right:15px;
-  color:rgba(255,255,255,.25);
-  font-size:15px;cursor:pointer;
-  transition:color .2s;
-}
-.input-shell input:focus ~ .ic{color:rgba(255,255,255,.5)}
+  .hero-quote p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+  }
 
-.btn{
-  width:100%;background:#fff;color:#000;
-  border:none;border-radius:12px;padding:15px;
-  font-size:14px;font-weight:700;font-family:'Inter',sans-serif;
-  cursor:pointer;margin-top:8px;
-  transition:opacity .15s,transform .15s;
-  letter-spacing:-.2px;
-}
-.btn:hover{opacity:.88;transform:translateY(-1px)}
-.btn:active{transform:translateY(0)}
-.btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
+  .trust-pills {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
 
-.divider{height:1px;background:rgba(255,255,255,.06);margin:28px 0}
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+  }
 
-.features{display:flex;flex-direction:column;gap:12px}
-.feat{display:flex;align-items:center;gap:12px}
-.feat-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0}
-.feat span{font-size:12px;color:rgba(255,255,255,.4)}
+  .trust-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #58BFA5;
+  }
 
-.foot{margin-top:32px;display:flex;align-items:center;gap:8px}
-.foot .fl{font-size:11px;color:rgba(255,255,255,.2)}
-.ssl{
-  display:flex;align-items:center;gap:5px;
-  background:rgba(74,222,128,.07);
-  border:1px solid rgba(74,222,128,.15);
-  border-radius:100px;padding:4px 10px;
-}
-.ssl-dot{
-  width:5px;height:5px;border-radius:50%;
-  background:#4ade80;
-  animation:blink 2s infinite;
-}
-.ssl span{font-size:10px;color:#4ade80;font-weight:600}
+  /* ── LADO FORMULARIO (DERECHA) ── */
+  .form-pane {
+    flex: 1;
+    padding: 56px 52px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #FFFFFF;
+  }
 
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes spin{to{transform:rotate(360deg)}}
+  .form-header {
+    margin-bottom: 32px;
+  }
 
-@media(max-width:900px){
-  .left{display:none}
-  .right{width:100%;padding:40px 28px}
-  html,body{overflow:auto}
-}
+  .form-header .app-icon {
+    width: 44px;
+    height: 44px;
+    background: rgba(35, 155, 114, 0.1);
+    color: var(--brand-primary);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
+
+  .form-header h2 {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--brand-deep);
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .form-header p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .error-alert {
+    background: #FDF2F2;
+    border: 1px solid #F8B4B4;
+    color: #9B1C1C;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .input-group-custom {
+    margin-bottom: 20px;
+  }
+
+  .input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brand-deep);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .input-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-box .prefix-icon {
+    position: absolute;
+    left: 14px;
+    color: #A0AEC0;
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  .input-box input {
+    width: 100%;
+    padding: 12px 42px 12px 40px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: var(--text-dark);
+    transition: all 0.2s;
+  }
+
+  .input-box input:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(35, 155, 114, 0.15);
+  }
+
+  .input-box .toggle-pwd {
+    position: absolute;
+    right: 14px;
+    color: #A0AEC0;
+    font-size: 16px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .input-box .toggle-pwd:hover {
+    color: var(--brand-deep);
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 14px;
+    background: var(--brand-primary);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    box-shadow: 0 4px 12px rgba(35, 155, 114, 0.25);
+    transition: all 0.2s;
+  }
+
+  .btn-submit:hover {
+    background: var(--brand-primary-hover);
+    box-shadow: 0 6px 16px rgba(35, 155, 114, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .btn-submit:active {
+    transform: translateY(0);
+  }
+
+  .form-footer {
+    margin-top: 32px;
+    text-align: center;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 20px;
+  }
+
+  .form-footer small {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  @media (max-width: 900px) {
+    .login-card { flex-direction: column; max-width: 480px; min-height: auto; }
+    .visual-pane { padding: 32px; min-height: 220px; }
+    .hero-quote h1 { font-size: 26px; }
+    .hero-quote p { display: none; }
+    .form-pane { padding: 36px 28px; }
+  }
 </style>
 </head>
 <body>
 
-<canvas id="c"></canvas>
-
-<div class="wrap">
-
-  <!-- LEFT — identidad de marca -->
-  <div class="left">
-    <div class="logo">
-      <div class="logo-mark">
-        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="2" width="7" height="7" rx="2" fill="#000"/>
-          <rect x="11" y="2" width="7" height="7" rx="2" fill="#000"/>
-          <rect x="2" y="11" width="7" height="7" rx="2" fill="#000"/>
-          <rect x="11" y="11" width="7" height="7" rx="2" fill="#000" opacity=".35"/>
-        </svg>
+<div class="login-card">
+  <!-- Zona Visual de Mascotas -->
+  <div class="visual-pane">
+    <div class="visual-overlay"></div>
+    <div class="visual-content">
+      <div class="brand-badge">
+        <i class="bi bi-heart-pulse-fill"></i>
+        <span>PetPOS Pro</span>
       </div>
-      <span class="logo-name">NexSales</span>
-    </div>
 
-    <div class="hero">
-      <h1>Control<br/><span>total</span><br/>del negocio</h1>
-      <p>Ventas, inventario y reportes en una sola plataforma. Diseñada para escalar sin límites.</p>
-    </div>
+      <div class="hero-quote">
+        <h1>Cuidamos sus huellas, organizamos tu negocio.</h1>
+        <p>Plataforma integral para peluquerías caninas y tiendas de productos para animales. Ventas, caja, inventario y comisiones en un solo lugar.</p>
+      </div>
 
-    <div class="stats">
-      <div class="stat">
-        <span class="n g">99.9%</span>
-        <span class="l">Uptime</span>
-      </div>
-      <div class="stat">
-        <span class="n">∞</span>
-        <span class="l">Ventas</span>
-      </div>
-      <div class="stat">
-        <span class="n">24/7</span>
-        <span class="l">Soporte</span>
+      <div class="trust-pills">
+        <div class="trust-item"><span class="trust-dot"></span> Control de Caja & Bancos</div>
+        <div class="trust-item"><span class="trust-dot"></span> Comisiones de Peluquería 50%</div>
+        <div class="trust-item"><span class="trust-dot"></span> Lector de Código USB</div>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT — formulario -->
-  <div class="right">
-
-    <div class="form-head">
-      <p class="tag">Acceso al sistema</p>
-      <h2>Bienvenido<br/><span>de vuelta</span></h2>
+  <!-- Zona de Acceso del Administrador -->
+  <div class="form-pane">
+    <div class="form-header">
+      <div class="app-icon"><i class="bi bi-shield-lock-fill"></i></div>
+      <h2>Bienvenido a PetPOS Pro</h2>
+      <p>Ingresa tus credenciales para administrar la tienda y peluquería.</p>
     </div>
 
     {% if form.errors %}
-    <div class="error-bar">
-      <div class="error-dot"></div>
-      Credenciales incorrectas. Inténtalo de nuevo.
+    <div class="error-alert">
+      <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+      <div><strong>Usuario o contraseña incorrectos.</strong> Verifica tus datos e intenta nuevamente.</div>
     </div>
     {% endif %}
 
-    <form method="post" id="lf">
+    <form method="post" id="loginForm">
       {% csrf_token %}
 
-      <div class="field">
-        <div class="field-label">Usuario</div>
-        <div class="input-shell">
-          <input type="text" name="username" id="id_username"
-                 placeholder="tu.usuario"
-                 autocomplete="username" spellcheck="false"/>
-          <i class="bi bi-at ic"></i>
+      <div class="input-group-custom">
+        <label class="input-label" for="id_username">Usuario Administrador</label>
+        <div class="input-box">
+          <i class="bi bi-person-fill prefix-icon"></i>
+          <input type="text" name="username" id="id_username" placeholder="admin" required autofocus autocomplete="username">
         </div>
       </div>
 
-      <div class="field">
-        <div class="field-label">Contraseña</div>
-        <div class="input-shell">
-          <input type="password" name="password" id="id_password"
-                 placeholder="••••••••"
-                 autocomplete="current-password"/>
-          <i class="bi bi-eye ic" id="eye-toggle"></i>
+      <div class="input-group-custom">
+        <label class="input-label" for="id_password">Contraseña</label>
+        <div class="input-box">
+          <i class="bi bi-lock-fill prefix-icon"></i>
+          <input type="password" name="password" id="id_password" placeholder="••••••••" required autocomplete="current-password">
+          <i class="bi bi-eye toggle-pwd" id="pwdToggle" title="Mostrar/ocultar contraseña"></i>
         </div>
       </div>
 
-      <button type="submit" class="btn" id="submit-btn">
-        <div class="btn-inner" id="btn-inner">
-          <span>Entrar al sistema</span>
-          <i class="bi bi-arrow-right"></i>
-        </div>
+      <button type="submit" class="btn-submit" id="btnSubmit">
+        <span>Iniciar Sesión</span>
+        <i class="bi bi-arrow-right"></i>
       </button>
     </form>
 
-    <div class="divider"></div>
-
-    <div class="features">
-      <div class="feat"><div class="feat-dot"></div><span>Reportes en tiempo real</span></div>
-      <div class="feat"><div class="feat-dot"></div><span>Control de inventario y alertas automáticas</span></div>
-      <div class="feat"><div class="feat-dot"></div><span>Facturación y exportación PDF</span></div>
+    <div class="form-footer">
+      <small><i class="bi bi-shield-check text-success"></i> Acceso seguro cifrado &bull; PetPOS Pro v2.0</small>
     </div>
-
-    <div class="foot">
-      <span class="fl">Conexión segura</span>
-      <div class="ssl">
-        <div class="ssl-dot"></div>
-        <span>SSL Activo</span>
-      </div>
-    </div>
-
   </div>
 </div>
 
 <script>
-/* ── CANVAS PARTÍCULAS ── */
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-let W, H, pts = [];
-
-function resize() {
-  W = canvas.width  = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-}
-resize();
-window.addEventListener('resize', () => { resize(); init(); });
-
-function init() {
-  pts = [];
-  const n = Math.floor(W * H / 22000);
-  for (let i = 0; i < n; i++) {
-    pts.push({
-      x:  Math.random() * W,
-      y:  Math.random() * H,
-      vx: (Math.random() - .5) * .3,
-      vy: (Math.random() - .5) * .3,
-      r:  Math.random() * .8 + .2,
-      o:  Math.random() * .4 + .1,
-    });
-  }
-}
-init();
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  pts.forEach(p => {
-    p.x += p.vx; p.y += p.vy;
-    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
-    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${p.o})`;
-    ctx.fill();
+  // Alternar visualización de contraseña
+  const pwdInput = document.getElementById('id_password');
+  const pwdToggle = document.getElementById('pwdToggle');
+  
+  pwdToggle.addEventListener('click', () => {
+    const isPassword = pwdInput.type === 'password';
+    pwdInput.type = isPassword ? 'text' : 'password';
+    pwdToggle.className = isPassword ? 'bi bi-eye-slash toggle-pwd' : 'bi bi-eye toggle-pwd';
   });
-  for (let i = 0; i < pts.length; i++) {
-    for (let j = i + 1; j < pts.length; j++) {
-      const dx = pts[i].x - pts[j].x;
-      const dy = pts[i].y - pts[j].y;
-      const d  = Math.sqrt(dx * dx + dy * dy);
-      if (d < 80) {
-        ctx.beginPath();
-        ctx.moveTo(pts[i].x, pts[i].y);
-        ctx.lineTo(pts[j].x, pts[j].y);
-        ctx.strokeStyle = `rgba(255,255,255,${.05 * (1 - d / 80)})`;
-        ctx.lineWidth = .5;
-        ctx.stroke();
-      }
-    }
-  }
-  requestAnimationFrame(draw);
-}
-draw();
 
-/* ── TOGGLE CONTRASEÑA ── */
-const eyeBtn  = document.getElementById('eye-toggle');
-const pwInput = document.getElementById('id_password');
-eyeBtn.addEventListener('click', () => {
-  const visible = pwInput.type === 'text';
-  pwInput.type  = visible ? 'password' : 'text';
-  eyeBtn.className = visible
-    ? 'bi bi-eye ic'
-    : 'bi bi-eye-slash ic';
-});
-
-/* ── ENTER ENTRE CAMPOS ── */
-document.getElementById('id_username').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('id_password').focus(); }
-});
-
-/* ── LOADING STATE ── */
-document.getElementById('lf').addEventListener('submit', () => {
-  const btn   = document.getElementById('submit-btn');
-  const inner = document.getElementById('btn-inner');
-  inner.innerHTML = `<i class="bi bi-arrow-repeat" style="display:inline-block;animation:spin .7s linear infinite"></i><span>Verificando...</span>`;
-  btn.disabled = true;
-  btn.style.opacity = '.6';
-});
+  // Estado de carga en envío
+  document.getElementById('loginForm').addEventListener('submit', () => {
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Ingresando...`;
+  });
 </script>
+
 </body>
 </html>

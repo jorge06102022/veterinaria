@@ -1,16 +1,16 @@
 {% extends 'base/base.html' %}
 {% block title %}Reportes Financieros & Utilidad Real — PetPOS Pro{% endblock %}
-{% block page_title %}Reportes Financieros & Ganancia Estimada{% endblock %}
+{% block page_title %}Reportes Financieros & Rentabilidad Real{% endblock %}
 
 {% block content %}
 <!-- Filtros por período -->
 <div class="card-pos p-3 mb-4">
     <form method="get" class="row g-3 align-items-center">
         <div class="col-auto">
-            <span class="text-secondary small fw-bold">Período:</span>
+            <span class="text-muted small fw-bold text-uppercase"><i class="bi bi-calendar3 me-1"></i> Período de Análisis:</span>
         </div>
         <div class="col-auto">
-            <select name="periodo" class="form-select form-select-sm" onchange="this.form.submit()">
+            <select name="periodo" class="form-select form-select-sm" onchange="this.form.submit()" style="font-weight: 600; color: var(--brand-deep);">
                 <option value="hoy" {% if periodo == 'hoy' %}selected{% endif %}>Hoy</option>
                 <option value="semana" {% if periodo == 'semana' %}selected{% endif %}>Últimos 7 Días</option>
                 <option value="mes" {% if periodo == 'mes' %}selected{% endif %}>Mes Actual</option>
@@ -18,22 +18,22 @@
             </select>
         </div>
         <div class="col-auto ms-auto">
-            <a href="{% url 'reporte_diario' %}" class="btn btn-outline-pos btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Exportar PDF</a>
+            <a href="{% url 'reporte_diario' %}" class="btn-outline-pos btn-sm"><i class="bi bi-file-earmark-pdf me-1" style="color: var(--state-danger);"></i> Exportar Informe PDF</a>
         </div>
     </form>
 </div>
 
 <!-- Tarjetas de Resumen Económico -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-xl-3 col-md-6">
         <div class="stat-card accent">
             <div class="stat-icon accent"><i class="bi bi-cash-stack"></i></div>
             <div class="stat-label">Ingresos Brutos Totales</div>
             <div class="stat-value">${{ total_ventas|floatformat:0 }}</div>
-            <div class="stat-sub">Productos: ${{ ingresos_productos|floatformat:0 }} | Peluquería: ${{ ingresos_peluqueria|floatformat:0 }}</div>
+            <div class="stat-sub">Productos: ${{ ingresos_productos|floatformat:0 }} &bull; Peluquería: ${{ ingresos_peluqueria|floatformat:0 }}</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-xl-3 col-md-6">
         <div class="stat-card info">
             <div class="stat-icon info"><i class="bi bi-boxes"></i></div>
             <div class="stat-label">Margen Bruto Productos</div>
@@ -41,7 +41,7 @@
             <div class="stat-sub">Costo mercancía vendida: ${{ costo_productos|floatformat:0 }}</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-xl-3 col-md-6">
         <div class="stat-card warning">
             <div class="stat-icon warning"><i class="bi bi-scissors"></i></div>
             <div class="stat-label">Margen Peluquería Negocio</div>
@@ -49,77 +49,81 @@
             <div class="stat-sub">Comisiones pagadas (50%): ${{ comisiones_peluqueria|floatformat:0 }}</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-xl-3 col-md-6">
         <div class="stat-card success">
             <div class="stat-icon success"><i class="bi bi-bank"></i></div>
             <div class="stat-label">Resultado Económico Neto</div>
-            <div class="stat-value">${{ resultado_economico_neto|floatformat:0 }}</div>
-            <div class="stat-sub">Tras descontar gastos y pagos personal</div>
+            <div class="stat-value" style="color: var(--brand-primary);">${{ resultado_economico_neto|floatformat:0 }}</div>
+            <div class="stat-sub">Tras deducir comisiones y egresos operativos</div>
         </div>
     </div>
 </div>
 
 <!-- Desglose de Gastos y Medios de Pago -->
 <div class="row g-4 mb-4">
-    <div class="col-md-6">
+    <div class="col-lg-6">
         <div class="card-pos h-100">
             <div class="card-pos-header">
-                <span><i class="bi bi-pie-chart me-2 text-info"></i>Medios de Pago Recibidos en el Período</span>
+                <span><i class="bi bi-pie-chart me-2" style="color: var(--brand-primary);"></i>Medios de Pago Recibidos en el Período</span>
             </div>
             <div class="card-pos-body p-4">
-                <table class="table table-pos mb-0">
-                    <tr>
-                        <td><i class="bi bi-cash text-success me-2"></i>Efectivo Físico en Caja:</td>
-                        <td class="text-end fw-bold text-success">${{ total_efectivo|floatformat:0 }}</td>
-                    </tr>
-                    <tr>
-                        <td><i class="bi bi-phone text-info me-2"></i>Transferencias Bancarias (Nequi/Daviplata/Bancolombia):</td>
-                        <td class="text-end fw-bold text-info">${{ total_transferencia|floatformat:0 }}</td>
-                    </tr>
-                    <tr>
-                        <td><i class="bi bi-credit-card text-warning me-2"></i>Tarjetas Débito / Crédito:</td>
-                        <td class="text-end fw-bold text-warning">${{ total_tarjeta|floatformat:0 }}</td>
-                    </tr>
-                    <tr>
-                        <td><i class="bi bi-three-dots text-secondary me-2"></i>Otros Medios:</td>
-                        <td class="text-end fw-bold text-secondary">${{ total_otros_medios|floatformat:0 }}</td>
-                    </tr>
-                    <tr class="border-top" style="border-color: var(--border) !important;">
-                        <td class="fw-bold text-white fs-5 pt-2">TOTAL COBRADO:</td>
-                        <td class="text-end fw-bold text-white fs-5 pt-2">${{ total_ventas|floatformat:0 }}</td>
-                    </tr>
+                <table class="table-pos" style="border: none;">
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-cash text-success me-2"></i>Efectivo Físico en Caja:</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--brand-primary);">${{ total_efectivo|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-phone text-info me-2"></i>Transferencias Bancarias (Nequi/Daviplata/Bancolombia):</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--brand-deep);">${{ total_transferencia|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-credit-card text-warning me-2"></i>Tarjetas Débito / Crédito:</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--state-warning);">${{ total_tarjeta|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-three-dots text-secondary me-2"></i>Otros Medios:</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--text-muted);">${{ total_otros_medios|floatformat:0 }}</td>
+                        </tr>
+                        <tr style="border-top: 2px solid var(--border-color);">
+                            <td style="font-weight: 800; color: var(--brand-deep); font-size: 15px; padding-top: 14px;">TOTAL RECAUDADO:</td>
+                            <td style="text-align: right; font-weight: 800; color: var(--brand-deep); font-size: 18px; padding-top: 14px;">${{ total_ventas|floatformat:0 }}</td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="col-md-6">
+    <div class="col-lg-6">
         <div class="card-pos h-100">
             <div class="card-pos-header">
-                <span><i class="bi bi-calculator me-2 text-danger"></i>Estructura de Costos y Egresos</span>
+                <span><i class="bi bi-calculator me-2" style="color: var(--state-danger);"></i>Estructura de Costos y Egresos</span>
             </div>
             <div class="card-pos-body p-4">
-                <table class="table table-pos mb-0">
-                    <tr>
-                        <td>Costo de Mercancía Vendida (COGS):</td>
-                        <td class="text-end text-danger fw-bold">-${{ costo_productos|floatformat:0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>Comisiones de Peluquería Generadas (50%):</td>
-                        <td class="text-end text-danger fw-bold">-${{ comisiones_peluqueria|floatformat:0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>Pagos al Resto del Personal / Ayudantes:</td>
-                        <td class="text-end text-danger fw-bold">-${{ pagos_personal|floatformat:0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>Gastos Operativos (Arriendo, Luz, Aseo):</td>
-                        <td class="text-end text-danger fw-bold">-${{ gastos_operativos|floatformat:0 }}</td>
-                    </tr>
-                    <tr class="border-top" style="border-color: var(--border) !important;">
-                        <td class="fw-bold text-success fs-5 pt-2">UTILIDAD NETA ESTIMADA:</td>
-                        <td class="text-end fw-bold text-success fs-4 pt-2">${{ resultado_economico_neto|floatformat:0 }}</td>
-                    </tr>
+                <table class="table-pos" style="border: none;">
+                    <tbody>
+                        <tr>
+                            <td style="color: var(--text-muted);">Costo de Mercancía Vendida (COGS):</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--state-danger);">-${{ costo_productos|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted);">Comisiones de Peluquería Generadas (50%):</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--state-danger);">-${{ comisiones_peluqueria|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted);">Pagos al Resto del Personal / Ayudantes:</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--state-danger);">-${{ pagos_personal|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted);">Gastos Operativos (Arriendo, Luz, Aseo):</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--state-danger);">-${{ gastos_operativos|floatformat:0 }}</td>
+                        </tr>
+                        <tr style="border-top: 2px solid var(--border-color);">
+                            <td style="font-weight: 800; color: var(--brand-primary); font-size: 15px; padding-top: 14px;">UTILIDAD NETA ESTIMADA:</td>
+                            <td style="text-align: right; font-weight: 800; color: var(--brand-primary); font-size: 18px; padding-top: 14px;">${{ resultado_economico_neto|floatformat:0 }}</td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -129,28 +133,32 @@
 <!-- Top Productos Vendidos -->
 <div class="card-pos">
     <div class="card-pos-header">
-        <span><i class="bi bi-award-fill me-2 text-warning"></i>Top Productos Más Vendidos</span>
+        <span><i class="bi bi-trophy-fill me-2" style="color: var(--state-warning);"></i>Top Productos Más Vendidos del Período</span>
     </div>
-    <div class="card-pos-body p-0">
-        <table class="table table-pos mb-0">
+    <div class="table-responsive-pos">
+        <table class="table-pos">
             <thead>
                 <tr>
                     <th>Producto</th>
                     <th>Código / SKU</th>
-                    <th class="text-center">Unidades Vendidas</th>
-                    <th class="text-end">Ingresos Generados</th>
+                    <th style="text-align: center;">Unidades Vendidas</th>
+                    <th style="text-align: right;">Ingresos Generados</th>
                 </tr>
             </thead>
             <tbody>
                 {% for tp in top_productos %}
                 <tr>
-                    <td class="fw-bold text-white">{{ tp.producto__nombre }}</td>
-                    <td>{{ tp.sku_producto }}</td>
-                    <td class="text-center fw-bold">{{ tp.qty }}</td>
-                    <td class="text-end text-success fw-bold">${{ tp.ingresos|floatformat:0 }}</td>
+                    <td style="font-weight: 700; color: var(--brand-deep);">{{ tp.producto__nombre }}</td>
+                    <td><span class="badge-pos badge-info">{{ tp.sku_producto }}</span></td>
+                    <td style="text-align: center;"><span class="badge-pos badge-accent">{{ tp.qty }}</span></td>
+                    <td style="text-align: right; font-weight: 800; color: var(--brand-primary);">${{ tp.ingresos|floatformat:0 }}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="4" class="text-center text-muted py-4">No hay ventas registradas en este período.</td></tr>
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 36px 16px;">
+                        No hay ventas registradas en el período seleccionado.
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

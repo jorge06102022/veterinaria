@@ -4,33 +4,39 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card-pos p-4 border-warning">
-            <h5 class="fw-bold text-white mb-3"><i class="bi bi-cash-stack me-2 text-warning"></i>Adelanto de Comisiones</h5>
-            <p class="small text-secondary mb-3">
-                Un adelanto reduce directamente el saldo a liquidar del trabajador al final de la jornada y descuenta la salida de dinero de la caja física o banco una sola vez.
-            </p>
+    <div class="col-lg-6 col-md-8">
+        <div class="card-pos p-4">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(226, 132, 19, 0.12); color: var(--state-warning); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0" style="color: var(--brand-deep);">Adelanto de Comisiones a Cuenta</h6>
+                    <small class="text-muted">Descuenta efectivo de caja física y se imputa en la liquidación diaria</small>
+                </div>
+            </div>
+
             <form method="post">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Peluquero Beneficiario:</label>
+                    <label class="form-label">Peluquero Beneficiario *</label>
                     {{ form.peluquero }}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Monto del Adelanto ($ COP):</label>
+                    <label class="form-label">Monto del Adelanto ($ COP) *</label>
                     {{ form.monto }}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-secondary">Medio de Entrega:</label>
+                    <label class="form-label">Medio de Entrega *</label>
                     {{ form.medio_entrega }}
                 </div>
                 <div class="mb-4">
-                    <label class="form-label small text-secondary">Motivo / Concepto:</label>
+                    <label class="form-label">Motivo / Justificación *</label>
                     {{ form.motivo }}
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{% url 'peluqueria_dashboard' %}" class="btn btn-outline-secondary w-50">Cancelar</a>
-                    <button type="submit" class="btn btn-warning text-dark fw-bold w-50">
+                    <a href="{% url 'peluqueria_dashboard' %}" class="btn-outline-pos w-50 justify-content-center">Cancelar</a>
+                    <button type="submit" class="btn-accent w-50 justify-content-center" style="background: var(--brand-primary);">
                         <i class="bi bi-check-lg me-1"></i> Confirmar Adelanto
                     </button>
                 </div>
