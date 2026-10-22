@@ -14,13 +14,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ─────────────────────────────────────────────
 # SEGURIDAD Y ENTORNO
 # ─────────────────────────────────────────────
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
+SECRET_KEY = (
+    os.environ.get('SECRET_KEY') or
+    os.environ.get('DJANGO_SECRET_KEY') or
     'django-insecure-pos-system-petshop-key-2024-prod'
 )
 
-# En producción en Render se debe configurar DJANGO_DEBUG=False
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 't')
+# En producción en Render se debe configurar DEBUG=False o DJANGO_DEBUG=False
+_debug_raw = os.environ.get('DEBUG') or os.environ.get('DJANGO_DEBUG', 'True')
+DEBUG = _debug_raw.lower() in ('true', '1', 't')
 
 # ALLOWED_HOSTS
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS')

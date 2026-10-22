@@ -28,8 +28,8 @@ from .forms import (
     ProductoForm, ProveedorForm, ServicioPeluqueriaForm, TrabajadorForm
 )
 from .models import (
-    AdelantoPeluquero, AtencionPeluqueria, Categoria, Cliente,
-    Compra, DetalleCompra, DetalleVenta, Egreso,
+    AdelantoPeluquero, AtencionPeluqueria, BitacoraAuditoria, Categoria, Cliente,
+    CitaPeluqueria, Compra, DetalleCompra, DetalleVenta, Egreso,
     LiquidacionPeluquero, Mascota, MovimientoInventario, PagoLiquidacion,
     PagoVenta, Producto, Proveedor, ServicioPeluqueria,
     SesionCaja, Trabajador, Venta
@@ -1755,4 +1755,142 @@ def proveedor_eliminar(request, pk):
     proveedor.delete()
     messages.success(request, f"Proveedor '{nombre}' eliminado exitosamente al no tener compras asociadas.")
     return redirect('proveedores_list')
+
+
+# ==============================================================================
+# 11. ADMINISTRACIÓN DE SERVICIOS DE PELUQUERÍA
+# ==============================================================================
+
+@login_required
+def servicios_list(request):
+    """
+    Lista administrativa de servicios de peluquería.
+    Permite filtrar por estado (activo/inactivo) y buscar por nombre o descripción.
+    """
+    q = request.GET.get('q', '').strip()
+    estado = request.GET.get('estado', '')
+
+    servicios = ServicioPeluqueria.objects.all()
+    if q:
+        servicios = servicios.filter(Q(nombre__icontains=q) | Q(descripcion__icontains=q))
+    if estado == 'activo':
+        servicios = servicios.filter(activo=True)
+    elif estado == 'inactivo':
+        servicios = servicios.filter(activo=False)
+
+    servicios = servicios.order_by('nombre')
+
+    return render(request, 'peluqueria/servicios_list.html', {
+        'servicios': servicios,
+        'q': q,
+        'estado_sel': estado,
+    })
+
+
+@login_required
+def servicio_crear(request):
+    """Registra un nuevo servicio de peluquería en el catálogo."""
+    if request.method == 'POST':
+        form = ServicioPeluqueriaForm(request.POST)
+        if form.is_valid():
+            servicio = form.save()
+            # Auditoría
+            BitacoraAuditoria.objects.create(
+                usuario=request.user,
+                accion='personal_modificado',
+                modulo='Servicios de Peluquería',
+                objeto_id=str(servicio.pk),
+                descripcion=f"Servicio de peluquería '{servicio.nombre}' creado con precio sugerido ${servicio.precio_sugerido:,.0f}.",
+                direccion_ip=request.META.get('REMOTE_ADDR')
+            )
+            messages.success(request, f"Servicio de peluquería '{servicio.nombre}' creado exitosamente.")
+            return redirect('servicios_list')
+    else:
+        form = ServicioPeluqueriaForm(initial={'activo': True, 'precio_sugerido': Decimal('25000.00')})
+    return render(request, 'peluqueria/servicio_form.html', {
+        'form': form,
+        'titulo': 'Nuevo Servicio de Peluquería',
+        'es_edicion': False,
+    })
+
+
+@login_required
+def servicio_editar(request, pk):
+    """
+    Edita un servicio de peluquería existente.
+    Las ventas y atenciones históricas conservan su nombre y precio cobrado original.
+    """
+    servicio = get_object_or_404(ServicioPeluqueria, pk=pk)
+    if request.method == 'POST':
+        form = ServicioPeluqueriaForm(request.POST, instance=servicio)
+        if form.is_valid():
+            servicio = form.save()
+            BitacoraAuditoria.objects.create(
+                usuario=request.user,
+                accion='personal_modificado',
+                modulo='Servicios de Peluquería',
+                objeto_id=str(servicio.pk),
+                descripcion=f"Servicio '{servicio.nombre}' actualizado. Nuevo precio: ${servicio.precio_sugerido:,.0f}.",
+                direccion_ip=request.META.get('REMOTE_ADDR')
+            )
+            messages.success(request, f"Servicio '{servicio.nombre}' actualizado correctamente.")
+            return redirect('servicios_list')
+    else:
+        form = ServicioPeluqueriaForm(instance=servicio)
+    return render(request, 'peluqueria/servicio_form.html', {
+        'form': form,
+        'servicio': servicio,
+        'titulo': f'Editar Servicio: {servicio.nombre}',
+        'es_edicion': True,
+    })
+
+
+@login_required
+@require_POST
+def servicio_toggle_activo(request, pk):
+    """Activa o desactiva un servicio de peluquería sin alterar el historial."""
+    servicio = get_object_or_404(ServicioPeluqueria, pk=pk)
+    servicio.activo = not servicio.activo
+    servicio.save()
+    estado_str = "activado" if servicio.activo else "desactivado"
+    messages.success(request, f"El servicio '{servicio.nombre}' ha sido {estado_str} exitosamente.")
+    return redirect('servicios_list')
+
+
+@login_required
+@require_POST
+def servicio_eliminar(request, pk):
+    """
+    Elimina un servicio SOLO si no tiene atenciones ni citas asociadas.
+    Si ya fue utilizado en alguna atención histórica o cita, bloquea la eliminación
+    física para proteger la integridad referencial y ofrece desactivarlo.
+    """
+    servicio = get_object_or_404(ServicioPeluqueria, pk=pk)
+    
+    # Comprobar atenciones históricas
+    tiene_atenciones = AtencionPeluqueria.objects.filter(servicio=servicio).exists()
+    tiene_citas = hasattr(servicio, 'citas') and servicio.citas.exists()
+
+    if tiene_atenciones or tiene_citas:
+        messages.error(
+            request,
+            f"No se puede eliminar el servicio '{servicio.nombre}' porque cuenta con registros históricos "
+            f"asociados (atenciones facturadas o citas en agenda). "
+            f"Puedes desactivarlo para que no aparezca en nuevas ventas ni turnos sin afectar el historial financiero."
+        )
+        return redirect('servicios_list')
+
+    nombre = servicio.nombre
+    servicio.delete()
+    BitacoraAuditoria.objects.create(
+        usuario=request.user,
+        accion='personal_modificado',
+        modulo='Servicios de Peluquería',
+        objeto_id=str(pk),
+        descripcion=f"Servicio de peluquería '{nombre}' eliminado físicamente al no poseer historial asociado.",
+        direccion_ip=request.META.get('REMOTE_ADDR')
+    )
+    messages.success(request, f"Servicio '{nombre}' eliminado exitosamente.")
+    return redirect('servicios_list')
+
 

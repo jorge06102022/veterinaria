@@ -54,53 +54,82 @@ Este manual contiene las directrices técnicas y operativas para la puesta en ma
 
 ---
 
-## 3. INTEGRIDAD FINANCIERA Y ARQUEO DE CAJA FÍSICA
+## 3. CATÁLOGO ADMINISTRABLE DE SERVICIOS DE PELUQUERÍA
+
+1. **Ruta:** `/servicios/` (o desde el menú lateral *Mascotas & Servicios > Servicios de Peluquería*).
+2. **Creación desde Cero:** No se imponen servicios obligatorios en el arranque. El administrador puede dar de alta los servicios reales que ofrece el establecimiento (ej. *Baño y Secado*, *Corte de Raza*, *Deslanado*, *Corte Higiénico*), con su precio sugerido base en pesos (`DecimalField`).
+3. **Protección Histórica Inviolable:**
+   - Si se edita el precio sugerido de un servicio, las ventas y atenciones pasadas **conservan intacto** el precio cobrado y la comisión liquidada en su momento histórico.
+   - Si un servicio cuenta con atenciones facturadas o citas en agenda, el sistema **bloquea su eliminación física** para proteger la integridad referencial y ofrece desactivarlo.
+   - Los servicios desactivados no aparecen en el POS para nuevas ventas ni en el formulario de nuevas citas, pero se preservan en los reportes e históricos.
+   - Si un servicio nuevo no posee atenciones ni citas asociadas, se puede eliminar físicamente de forma limpia con confirmación previa.
+
+---
+
+## 4. INTEGRIDAD FINANCIERA Y ARQUEO DE CAJA FÍSICA
 
 ### Reglas de Flujo de Efectivo en Gaveta
 En PetPOS Pro v2.4 Enterprise, el efectivo esperado en caja se calcula de forma atómica y auditable:
 $$\text{Efectivo Esperado} = \text{Monto Base} + \text{Ventas en Efectivo} - \text{Egresos Operativos en Efectivo} - \text{Compras en Efectivo} - \text{Adelantos de Peluqueros} - \text{Liquidaciones Pagadas en Efectivo}$$
 
-1. **Apertura de Caja:** Debe realizarse diariamente antes de registrar ventas o egresos. Se ingresa el efectivo base físico en gaveta.
+1. **Apertura de Caja:** Debe realizarse diariamente antes de registrar ventas o egresos. Se ingresa el efectivo base físico en gaveta mediante POST protegido por CSRF.
 2. **Compras de Mercancía en Efectivo:** Si se compra mercancía con dinero de la caja física, el sistema descuenta automáticamente el monto de la gaveta de la sesión activa y suma el stock al Kardex.
 3. **Pagos Mixtos y Digitales:** Pagos con tarjeta o transferencia se acumulan en sus respectivas cuentas de control bancario, sin desfasar el arqueo del efectivo en mano.
 4. **Cierre Ciego:** El cajero declara el efectivo físico contado. El sistema calcula la discrepancia (Sobrante o Faltante) y congela la sesión.
 
 ---
 
-## 4. AGENDA DE PELUQUERÍA Y CONTROL DE SOLAPAMIENTO
+## 5. AGENDA DE PELUQUERÍA Y CONTROL DE SOLAPAMIENTO
 
 1. **Ruta:** `/peluqueria/citas/`
-2. **Asignación:** Se selecciona cliente, mascota, servicio específico y peluquero asignado.
-3. **Control Anti-Solapamiento:** El sistema valida a nivel de modelo y formulario que el peluquero no tenga otra cita activa dentro de la ventana de tiempo calculada $(\text{Hora Inicio} \to \text{Hora Inicio} + \text{Duración en Minutos})$.
+2. **Asignación:** Se selecciona cliente, mascota, servicio específico del catálogo activo y peluquero asignado.
+3. **Control Anti-Solapamiento:** El sistema valida a nivel de modelo y formulario en el servidor que el peluquero no tenga otra cita activa dentro de la ventana de tiempo calculada $(\text{Hora Inicio} \to \text{Hora Inicio} + \text{Duración en Minutos})$.
 4. **Estados:** *Pendiente* $\to$ *Confirmada* $\to$ *En Proceso* $\to$ *Completada* / *Cancelada*.
-5. **Cobro:** Las citas no facturan de forma ficticia; se cobran a través del punto de venta POS garantizando el comprobante y el Kardex respectivo.
+5. **Cobro:** Las citas no facturan de forma ficticia ni generan comisiones anticipadas; el cobro se realiza a través del punto de venta POS garantizando el comprobante y el registro contable.
 
 ---
 
-## 5. REGLAS DE COMISIÓN DE PELUQUEROS (50%)
+## 6. REGLAS DE COMISIÓN DE PELUQUEROS (50%)
 
-- Los servicios de peluquería generan un 50% de comisión neta para el peluquero asignado.
-- Los adelantos registrados durante el periodo descuentan el saldo por pagar.
-- Las liquidaciones cerradas quedan congeladas en base de datos preservando el histórico financiero.
+- Los servicios de peluquería generan un 50% de comisión neta para el peluquero asignado sobre el valor efectivamente cobrado.
+- Los adelantos registrados durante el periodo descuentan el saldo por pagar sin descontarse dos veces.
+- Los saldos pendientes se arrastran automáticamente a la siguiente jornada sin duplicación.
+- Las liquidaciones cerradas quedan congeladas en base de datos preservando el histórico financiero inmutable.
 
 ---
 
-## 6. BITÁCORA INMUTABLE DE AUDITORÍA
+## 7. PRODUCTOS, KARDEX Y LECTOR DE CÓDIGO DE BARRAS
+
+1. **Ruta:** `/pos/` e `/inventario/`.
+2. **Lector de Código de Barras USB:** Opera en modo teclado emulando entrada rápida; al escanear el código SKU el producto se agrega directamente al carrito.
+3. **Kardex:** Registra salidas por venta, entradas por compras y ajustes manuales con motivo y trazabilidad de usuario.
+
+---
+
+## 8. COMPRAS Y PROVEEDORES
+
+1. **Ruta:** `/proveedores/` y `/compras/`.
+2. **Detalle de Factura:** Disponible en `/compras/<id>/` con desglose de renglones, costos unitarios y método de pago (efectivo o banco).
+3. **Protección de Proveedores:** No se permite eliminar proveedores con facturas de compra históricas registradas; se ofrece desactivación controlada.
+
+---
+
+## 9. BITÁCORA INMUTABLE DE AUDITORÍA
 
 1. **Ruta:** `/auditoria/`
-2. **Eventos Registrados:** Creación de citas, cambios de estado, compras de mercancía, egresos, aperturas y cierres de caja.
+2. **Eventos Registrados:** Creación de citas, cambios de estado, compras de mercancía, egresos, creación/edición de servicios, aperturas y cierres de caja.
 3. **Información Capturada:** Usuario, fecha y hora exacta, módulo, acción ejecutada, IP de origen y descripción detallada.
 
 ---
 
-## 7. DESPLIEGUE EN RENDER CON POSTGRESQL
+## 10. DESPLIEGUE EN RENDER CON POSTGRESQL
 
 ### Variables de Entorno Requeridas en Render Web Service:
-- `SECRET_KEY`: Cadena criptográfica aleatoria de 50+ caracteres.
-- `DEBUG`: `False` (modo producción estricto).
+- `SECRET_KEY` o `DJANGO_SECRET_KEY`: Cadena criptográfica aleatoria de 50+ caracteres.
+- `DEBUG` o `DJANGO_DEBUG`: `False` (modo producción estricto).
 - `ALLOWED_HOSTS`: Dominio asignado en Render (ej. `petpos-pro.onrender.com`).
 - `DATABASE_URL`: URI de conexión provista por Render PostgreSQL (formato `postgres://usuario:clave@host:5432/dbname`).
-- `CSRF_TRUSTED_ORIGINS`: `https://*.onrender.com` o el dominio propio.
+- `CSRF_TRUSTED_ORIGINS`: `https://*.onrender.com` o el dominio propio en HTTPS.
 - `DJANGO_SUPERUSER_USERNAME`: `tatiana`
 - `DJANGO_SUPERUSER_PASSWORD`: Contraseña segura definida por el propietario.
 
@@ -110,7 +139,7 @@ $$\text{Efectivo Esperado} = \text{Monto Base} + \text{Ventas en Efectivo} - \te
 
 ---
 
-## 8. COPIAS DE SEGURIDAD Y RECUPERACIÓN
+## 11. COPIAS DE SEGURIDAD Y RECUPERACIÓN
 
 ### En Producción (PostgreSQL)
 PetPOS Pro incluye el script automatizado [scripts/backup_restore.sh](file:///c:/Users/jorge%20ochoa/Downloads/pos_proyecto-main/scripts/backup_restore.sh):

@@ -1,0 +1,105 @@
+{% extends 'base/base.html' %}
+{% block title %}Servicios de Peluquería — PetPOS Pro{% endblock %}
+{% block page_title %}Administración de Servicios de Peluquería Canina & Spa{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <form method="get" class="d-flex gap-2 flex-wrap align-items-center" style="max-width: 600px;">
+        <input type="text" name="q" value="{{ q|default:'' }}" class="form-control" placeholder="Buscar por nombre o descripción..." style="width: 280px;">
+        <select name="estado" class="form-select" style="width: 150px;">
+            <option value="">Todos los estados</option>
+            <option value="activo" {% if estado_sel == 'activo' %}selected{% endif %}>✓ Activos</option>
+            <option value="inactivo" {% if estado_sel == 'inactivo' %}selected{% endif %}>✗ Inactivos</option>
+        </select>
+        <button type="submit" class="btn-accent"><i class="bi bi-search me-1"></i> Filtrar</button>
+        {% if q or estado_sel %}
+        <a href="{% url 'servicios_list' %}" class="btn-outline-pos" title="Limpiar filtros">✕</a>
+        {% endif %}
+    </form>
+    <div class="d-flex gap-2">
+        <a href="{% url 'peluqueria_dashboard' %}" class="btn-outline-pos">
+            <i class="bi bi-speedometer2 me-1"></i> Panel Peluquería
+        </a>
+        <a href="{% url 'servicio_crear' %}" class="btn-accent">
+            <i class="bi bi-plus-circle-fill me-1"></i> Nuevo Servicio
+        </a>
+    </div>
+</div>
+
+<div class="card-pos">
+    <div class="card-pos-header">
+        <span><i class="bi bi-scissors me-2" style="color: var(--brand-emerald);"></i>Catálogo de Servicios de Peluquería ({{ servicios|length }})</span>
+        <span class="text-muted small">Cada servicio genera 50% de comisión al peluquero asignado</span>
+    </div>
+    <div class="table-responsive-pos">
+        <table class="table-pos">
+            <thead>
+                <tr>
+                    <th>Nombre del Servicio</th>
+                    <th>Descripción / Notas</th>
+                    <th style="text-align: right;">Precio Sugerido</th>
+                    <th style="text-align: center;">Estado</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in servicios %}
+                <tr>
+                    <td>
+                        <div class="fw-bold" style="color: var(--brand-petroleum);">
+                            <i class="bi bi-tag-fill me-2" style="color: var(--brand-emerald);"></i>{{ s.nombre }}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="text-muted small">{{ s.descripcion|default:"Sin descripción" }}</span>
+                    </td>
+                    <td style="text-align: right;">
+                        <span class="fw-bold" style="color: var(--brand-petroleum); font-size: 15px;">
+                            ${{ s.precio_sugerido|floatformat:0 }}
+                        </span>
+                        <div class="text-muted" style="font-size: 11px;">
+                            Comisión est. (50%): ${{ s.precio_sugerido|floatformat:0 }} / 2
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="badge-pos {% if s.activo %}badge-success{% else %}badge-danger{% endif %}">
+                            {% if s.activo %}✓ Activo{% else %}✗ Inactivo{% endif %}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <div class="d-inline-flex gap-1">
+                            <a href="{% url 'servicio_editar' s.pk %}" class="btn-outline-pos btn-sm py-1 px-2" title="Editar precio o detalles">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <form action="{% url 'servicio_toggle_activo' s.pk %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-outline-pos btn-sm py-1 px-2" title="{% if s.activo %}Desactivar{% else %}Activar{% endif %}">
+                                    <i class="bi {% if s.activo %}bi-slash-circle text-warning{% else %}bi-check-circle text-success{% endif %}"></i>
+                                </button>
+                            </form>
+                            <form action="{% url 'servicio_eliminar' s.pk %}" method="post" class="d-inline" onsubmit="return confirm('¿Confirma que desea eliminar el servicio {{ s.nombre|escapejs }}?\n\nSi posee atenciones o citas asociadas, el sistema bloqueará la eliminación para proteger el histórico.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-outline-pos btn-sm py-1 px-2 text-danger" title="Eliminar servicio">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <div class="text-muted mb-3" style="font-size: 40px;"><i class="bi bi-inbox"></i></div>
+                        <h6 class="fw-bold text-muted">No hay servicios de peluquería registrados</h6>
+                        <p class="text-muted small mb-3">Puedes dar de alta los servicios que ofrece tu peluquería canina con sus precios base.</p>
+                        <a href="{% url 'servicio_crear' %}" class="btn-accent">
+                            <i class="bi bi-plus-circle-fill me-1"></i> Crear Primer Servicio
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

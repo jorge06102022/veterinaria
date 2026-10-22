@@ -40,6 +40,14 @@ urlpatterns = [
     path('peluqueros/<int:pk>/editar/', views.peluquero_editar, name='peluquero_editar'),
     path('peluqueros/<int:pk>/toggle-activo/', views.peluquero_toggle_activo, name='peluquero_toggle_activo'),
     path('peluqueros/<int:pk>/eliminar/', views.peluquero_eliminar, name='peluquero_eliminar'),
+
+    # Servicios de Peluquería (Administración del Catálogo)
+    path('servicios/', views.servicios_list, name='servicios_list'),
+    path('servicios/nuevo/', views.servicio_crear, name='servicio_crear'),
+    path('servicios/<int:pk>/editar/', views.servicio_editar, name='servicio_editar'),
+    path('servicios/<int:pk>/toggle-activo/', views.servicio_toggle_activo, name='servicio_toggle_activo'),
+    path('servicios/<int:pk>/eliminar/', views.servicio_eliminar, name='servicio_eliminar'),
+
     path('auditoria/', views.bitacora_auditoria, name='bitacora_auditoria'),
 
     # Clientes y Mascotas

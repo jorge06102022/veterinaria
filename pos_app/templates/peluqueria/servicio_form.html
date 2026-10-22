@@ -1,0 +1,77 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ titulo }} — PetPOS Pro{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="card-pos p-4">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--brand-glow); color: var(--brand-emerald); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="bi bi-tag"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0" style="color: var(--brand-petroleum);">{{ titulo }}</h6>
+                    <small class="text-muted">Servicio para atenciones de peluquería, agenda y comisiones al 50%</small>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; color: var(--brand-petroleum);">Nombre del Servicio *</label>
+                    {{ form.nombre }}
+                    <small class="text-muted">Ej: Baño y Secado, Corte de Raza, Deslanado, Limpieza Dental Canina</small>
+                    {% if form.nombre.errors %}
+                    <div class="text-danger small mt-1">{{ form.nombre.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; color: var(--brand-petroleum);">Descripción / Observaciones</label>
+                    {{ form.descripcion }}
+                    {% if form.descripcion.errors %}
+                    <div class="text-danger small mt-1">{{ form.descripcion.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; color: var(--brand-petroleum);">Precio Sugerido Base ($) *</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        {{ form.precio_sugerido }}
+                    </div>
+                    <small class="text-muted">El precio puede ser ajustado en mostrador durante la venta si se aplica un descuento.</small>
+                    {% if form.precio_sugerido.errors %}
+                    <div class="text-danger small mt-1">{{ form.precio_sugerido.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4 form-check form-switch pt-2">
+                    {{ form.activo }}
+                    <label class="form-check-label ms-2" for="{{ form.activo.id_for_label }}" style="font-weight: 600; color: var(--brand-petroleum);">
+                        Servicio activo para nuevas citas y ventas en POS
+                    </label>
+                </div>
+
+                {% if es_edicion %}
+                <div class="alert alert-info py-2 px-3 small mb-4" style="border-radius: 8px;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Integridad histórica garantizada:</strong> Las ventas y atenciones anteriores conservan intactos el nombre y el precio cobrado en su momento.
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between align-items-center pt-2">
+                    <a href="{% url 'servicios_list' %}" class="btn-outline-pos">
+                        <i class="bi bi-arrow-left me-1"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn-accent px-4">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Servicio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

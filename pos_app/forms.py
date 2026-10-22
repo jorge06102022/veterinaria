@@ -119,9 +119,26 @@ class ServicioPeluqueriaForm(forms.ModelForm):
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Baño Completo, Corte Higiénico'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Detalle del servicio'}),
-            'precio_sugerido': forms.NumberInput(attrs={'class': 'form-control', 'step': '100', 'min': '0'}),
+            'precio_sugerido': forms.NumberInput(attrs={'class': 'form-control', 'step': '500', 'min': '0'}),
             'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        if not nombre:
+            raise forms.ValidationError("El nombre del servicio de peluquería es obligatorio.")
+        qs = ServicioPeluqueria.objects.filter(nombre__iexact=nombre)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(f"Ya existe un servicio de peluquería registrado con el nombre '{nombre}'.")
+        return nombre
+
+    def clean_precio_sugerido(self):
+        precio = self.cleaned_data.get('precio_sugerido')
+        if precio is None or precio < Decimal('0.00'):
+            raise forms.ValidationError("El precio sugerido no puede ser negativo.")
+        return precio
 
 
 class ProveedorForm(forms.ModelForm):

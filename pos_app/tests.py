@@ -545,4 +545,80 @@ class PosPetShopTestSuite(TestCase):
         self.assertEqual(res_anon.status_code, 302)
         self.assertIn('/login/', res_anon.url)
 
+    # --------------------------------------------------------------------------
+    # 11. CATÁLOGO ADMINISTRABLE DE SERVICIOS E INTEGRIDAD HISTÓRICA
+    # --------------------------------------------------------------------------
+    def test_servicios_peluqueria_crud_e_integridad_historica(self):
+        """
+        Verifica:
+        1. Creación de un servicio nuevo desde la administración.
+        2. Edición de precio de un servicio existente sin alterar atenciones históricas.
+        3. Bloqueo de eliminación si tiene atenciones o citas asociadas.
+        4. Desactivación controlada y eliminación exitosa si no tiene historial.
+        """
+        # 1. Crear nuevo servicio
+        res_crear = self.client.post('/servicios/nuevo/', {
+            'nombre': 'Corte de Raza Schnauzer',
+            'descripcion': 'Corte tradicional de faldas y cejas',
+            'precio_sugerido': '42000.00',
+            'activo': 'on'
+        })
+        self.assertEqual(res_crear.status_code, 302)
+        nuevo_serv = ServicioPeluqueria.objects.filter(nombre='Corte de Raza Schnauzer').first()
+        self.assertIsNotNone(nuevo_serv)
+        self.assertEqual(nuevo_serv.precio_sugerido, Decimal('42000.00'))
+
+        # 2. Listado de servicios
+        res_list = self.client.get('/servicios/')
+        self.assertEqual(res_list.status_code, 200)
+        self.assertContains(res_list, 'Corte de Raza Schnauzer')
+
+        # 3. Vincular self.servicio (Baño y Corte Básico) a una atención histórica
+        atencion = AtencionPeluqueria.objects.create(
+            servicio=self.servicio,
+            nombre_servicio=self.servicio.nombre,
+            mascota=self.mascota_obj,
+            cliente=self.cliente_obj,
+            peluquero=self.peluquero,
+            precio_cobrado=Decimal('35000.00'),
+            descuento=Decimal('0.00'),
+            valor_neto=Decimal('35000.00'),
+            comision_calculada=Decimal('17500.00'),
+            parte_negocio=Decimal('17500.00')
+        )
+
+        # 4. Intentar eliminar self.servicio -> Debe ser BLOQUEADO por tener atención histórica
+        res_elim_bloq = self.client.post(f'/servicios/{self.servicio.pk}/eliminar/')
+        self.assertEqual(res_elim_bloq.status_code, 302)
+        # El servicio sigue existiendo
+        self.assertTrue(ServicioPeluqueria.objects.filter(pk=self.servicio.pk).exists())
+
+        # 5. Modificar el precio de self.servicio a $60.000
+        res_edit = self.client.post(f'/servicios/{self.servicio.pk}/editar/', {
+            'nombre': 'Baño y Corte Básico Premium',
+            'descripcion': 'Actualizado',
+            'precio_sugerido': '60000.00',
+            'activo': 'on'
+        })
+        self.assertEqual(res_edit.status_code, 302)
+        self.servicio.refresh_from_db()
+        self.assertEqual(self.servicio.precio_sugerido, Decimal('60000.00'))
+
+        # La atención histórica CONSERVA su valor y comisión original intactos
+        atencion.refresh_from_db()
+        self.assertEqual(atencion.precio_cobrado, Decimal('35000.00'))
+        self.assertEqual(atencion.comision_calculada, Decimal('17500.00'))
+
+        # 6. Desactivar el servicio nuevo
+        res_toggle = self.client.post(f'/servicios/{nuevo_serv.pk}/toggle-activo/')
+        self.assertEqual(res_toggle.status_code, 302)
+        nuevo_serv.refresh_from_db()
+        self.assertFalse(nuevo_serv.activo)
+
+        # 7. Eliminar el servicio nuevo (no tiene historial) -> Debe eliminarse exitosamente
+        res_elim_ok = self.client.post(f'/servicios/{nuevo_serv.pk}/eliminar/')
+        self.assertEqual(res_elim_ok.status_code, 302)
+        self.assertFalse(ServicioPeluqueria.objects.filter(pk=nuevo_serv.pk).exists())
+
+
 
