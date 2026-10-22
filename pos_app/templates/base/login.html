@@ -6,7 +6,7 @@
 <title>PetPOS Pro — Iniciar Sesión</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
 {% load static %}
 <style>
@@ -15,212 +15,112 @@
   :root {
     --brand-emerald: #239B72;
     --brand-emerald-hover: #1e8763;
-    --brand-deep: #176B50;
     --brand-petroleum: #173B4D;
-    --brand-turquoise: #58BFA5;
-    --text-dark: #1F2D35;
-    --text-muted: #64748B;
-    --border-subtle: #E2E8E6;
   }
 
   body {
     min-height: 100vh;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    /* login 1: Fondo de toda la pantalla */
+    /* login 1: Fondo de toda la pantalla (100% viewport) */
     background: url("{% static 'img/login_1.jpg' %}") center center / cover no-repeat fixed;
-    color: var(--text-dark);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
-    letter-spacing: -0.01em;
+    padding: 20px;
     position: relative;
     overflow-x: hidden;
   }
 
-  /* Capa de atmósfera para contraste y elegancia cinematográfica */
+  /* Capa de contraste cinematográfica suave */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(16, 26, 48, 0.45) 0%, rgba(10, 18, 32, 0.75) 100%);
+    background: rgba(10, 20, 36, 0.45);
     backdrop-filter: blur(2px);
     z-index: 1;
     pointer-events: none;
   }
 
-  /* ── TARJETA PRINCIPAL DE LOGIN BASADA EN LOGIN 2 ── */
-  .login-card-container {
+  /* ── TARJETA COMPACTA BASADA EN LOGIN 2 ── */
+  .login-card-compact {
     position: relative;
     z-index: 2;
     width: 100%;
-    max-width: 960px;
-    min-height: 560px;
-    background: #FFFFFF;
-    border-radius: 24px;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(0, 0, 0, 0.2);
-    display: flex;
+    max-width: 440px;
+    background: url("{% static 'img/login_2.jpg' %}") center top / cover no-repeat;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.25);
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    animation: fadeInCard 0.4s ease-out;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    animation: fadeIn 0.3s ease-out;
   }
 
-  @keyframes fadeInCard {
-    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  /* ── ZONA DE LOGIN 2 (ILUSTRACIÓN DE MASCOTAS FELICES JUGANDO) ── */
-  .card-banner-pane {
-    flex: 1.15;
-    position: relative;
-    background: url("{% static 'img/login_2.jpg' %}") center center / cover no-repeat;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 38px 36px;
-    color: #FFFFFF;
-  }
-
-  /* Degradado suave para legibilidad sobre login 2 */
-  .card-banner-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(23, 59, 77, 0.72) 0%, rgba(23, 107, 80, 0.5) 50%, rgba(15, 40, 50, 0.85) 100%);
-    z-index: 1;
-  }
-
-  .card-banner-content {
-    position: relative;
-    z-index: 2;
+  /* Capa interna semi-translúcida para garantizar legibilidad de campos sin tapar la tarjeta */
+  .card-inner-glass {
+    width: 100%;
     height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-
-  .brand-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(255, 255, 255, 0.18);
+    background: linear-gradient(180deg, rgba(23, 59, 77, 0.72) 0%, rgba(15, 35, 46, 0.88) 40%, rgba(12, 28, 38, 0.94) 100%);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 7px 16px;
-    border-radius: 100px;
-    width: fit-content;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
-  .brand-paw-img {
-    width: 20px;
-    height: 20px;
-    filter: brightness(0) invert(1);
-  }
-
-  .brand-badge span {
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    color: #FFFFFF;
-  }
-
-  .banner-quote {
-    margin: 24px 0;
-  }
-
-  .banner-quote h2 {
-    font-size: 28px;
-    font-weight: 800;
-    line-height: 1.2;
-    margin-bottom: 12px;
-    letter-spacing: -0.6px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  }
-
-  .banner-quote p {
-    font-size: 13px;
-    line-height: 1.55;
-    color: rgba(255, 255, 255, 0.95);
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .feature-pills {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .feature-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 5px 10px;
-    border-radius: 6px;
-    color: #FFFFFF;
-  }
-
-  .feature-pill i {
-    color: var(--brand-turquoise);
-  }
-
-  /* ── ZONA DERECHA: FORMULARIO FUNCIONAL DE PETPOS PRO ── */
-  .card-form-pane {
-    flex: 1;
-    padding: 44px 40px;
+    padding: 34px 32px 30px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    background: #FFFFFF;
   }
 
-  .form-header {
-    margin-bottom: 24px;
-  }
-
-  .form-header .app-icon {
-    width: 42px;
-    height: 42px;
-    background: rgba(35, 155, 114, 0.1);
-    border-radius: 12px;
+  /* Logo e Isotipo Compactos */
+  .brand-header {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 7px;
-    margin-bottom: 14px;
+    gap: 10px;
+    margin-bottom: 22px;
   }
 
-  .form-header h1 {
-    font-size: 23px;
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--brand-emerald);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    box-shadow: 0 2px 8px rgba(35, 155, 114, 0.4);
+  }
+
+  .brand-icon img {
+    width: 100%;
+    height: 100%;
+    filter: brightness(0) invert(1);
+  }
+
+  .brand-title {
+    font-size: 20px;
     font-weight: 800;
-    color: var(--brand-petroleum);
-    letter-spacing: -0.5px;
-    margin-bottom: 4px;
+    color: #FFFFFF;
+    letter-spacing: -0.4px;
   }
 
-  .form-header p {
-    font-size: 13px;
-    color: var(--text-muted);
-  }
-
+  /* Alerta de Error */
   .error-alert {
-    background: #FEF2F2;
-    border: 1px solid #FCA5A5;
-    color: #991B1B;
-    padding: 10px 14px;
-    border-radius: 10px;
+    background: rgba(220, 38, 38, 0.18);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    color: #FECACA;
+    padding: 9px 12px;
+    border-radius: 8px;
     font-size: 12px;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
   }
 
+  /* Campos del Formulario */
   .input-group-custom {
     margin-bottom: 16px;
   }
@@ -229,7 +129,7 @@
     display: block;
     font-size: 11px;
     font-weight: 700;
-    color: var(--brand-petroleum);
+    color: rgba(255, 255, 255, 0.85);
     margin-bottom: 6px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
@@ -245,41 +145,44 @@
     position: absolute;
     left: 14px;
     color: #94A3B8;
-    font-size: 16px;
+    font-size: 15px;
     pointer-events: none;
   }
 
   .input-box input {
     width: 100%;
-    padding: 11px 40px 11px 38px;
+    padding: 12px 38px 12px 38px;
     font-size: 14px;
     font-family: inherit;
-    border: 1px solid var(--border-subtle);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
-    background: #FFFFFF;
-    color: var(--text-dark);
+    background: rgba(255, 255, 255, 0.94);
+    color: #173B4D;
+    font-weight: 500;
     transition: all 0.2s;
   }
 
   .input-box input:focus {
     outline: none;
+    background: #FFFFFF;
     border-color: var(--brand-emerald);
-    box-shadow: 0 0 0 3px rgba(35, 155, 114, 0.16);
+    box-shadow: 0 0 0 3px rgba(35, 155, 114, 0.35);
   }
 
   .input-box .toggle-pwd {
     position: absolute;
     right: 14px;
-    color: #94A3B8;
-    font-size: 16px;
+    color: #64748B;
+    font-size: 15px;
     cursor: pointer;
     transition: color 0.2s;
   }
 
   .input-box .toggle-pwd:hover {
-    color: var(--brand-petroleum);
+    color: var(--brand-emerald);
   }
 
+  /* Botón de Inicio de Sesión */
   .btn-submit {
     width: 100%;
     padding: 12px;
@@ -294,153 +197,102 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    margin-top: 8px;
-    box-shadow: 0 4px 14px rgba(35, 155, 114, 0.25);
+    margin-top: 10px;
+    box-shadow: 0 4px 14px rgba(35, 155, 114, 0.35);
     transition: all 0.2s;
   }
 
   .btn-submit:hover {
     background: var(--brand-emerald-hover);
-    box-shadow: 0 6px 18px rgba(35, 155, 114, 0.35);
+    box-shadow: 0 6px 18px rgba(35, 155, 114, 0.45);
     transform: translateY(-1px);
   }
 
-  /* ── PIE DE LA TARJETA: SEGURIDAD + FIRMA ALPHA WEB STUDIO ── */
-  .login-footer-zone {
-    margin-top: 22px;
-    border-top: 1px solid var(--border-subtle);
+  .btn-submit:active {
+    transform: translateY(0);
+  }
+
+  /* Firma Discreta Alpha Web Studio */
+  .signature-compact {
+    margin-top: 20px;
     padding-top: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .security-badge {
-    font-size: 11px;
-    color: var(--text-muted);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-  }
-
-  .alpha-signature-login {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
     font-size: 11px;
-    color: #64748B;
-    text-decoration: none;
-    padding: 4px 10px;
-    border-radius: 6px;
-    background: #F8FAF9;
-    border: 1px solid #EAEFEF;
-    transition: background 0.15s;
+    color: rgba(255, 255, 255, 0.55);
   }
 
-  .alpha-signature-login:hover {
-    background: #F0F4F2;
+  .signature-compact strong {
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
   }
 
-  .alpha-signature-login strong {
-    color: var(--brand-petroleum);
-    font-weight: 700;
-  }
-
-  @media (max-width: 860px) {
-    .login-card-container { flex-direction: column; max-width: 440px; min-height: auto; }
-    .card-banner-pane { padding: 28px 24px; min-height: 180px; }
-    .banner-quote h2 { font-size: 22px; }
-    .banner-quote p { display: none; }
-    .card-form-pane { padding: 32px 24px; }
+  @media (max-width: 480px) {
+    .login-card-compact { max-width: 100%; }
+    .card-inner-glass { padding: 28px 22px 24px; }
   }
 </style>
 </head>
 <body>
 
-<div class="login-card-container">
-  <!-- Zona Basada en login 2: Escena de mascotas jugando en el parque con identidad PetPOS Pro -->
-  <div class="card-banner-pane">
-    <div class="card-banner-overlay"></div>
-    <div class="card-banner-content">
-      <div class="brand-badge">
-        <img src="{% static 'img/petpos-paw.svg' %}" alt="Huella PetPOS Pro" class="brand-paw-img">
-        <span>PetPOS Pro</span>
+<div class="login-card-compact">
+  <div class="card-inner-glass">
+    <!-- Logotipo compacto PetPOS Pro -->
+    <div class="brand-header">
+      <div class="brand-icon">
+        <img src="{% static 'img/petpos-paw.svg' %}" alt="PetPOS Pro">
       </div>
-
-      <div class="banner-quote">
-        <h2>Cuidamos sus huellas, organizamos tu negocio.</h2>
-        <p>Solución comercial de alto rendimiento para peluquerías de mascotas y tiendas especializadas. Control de ventas, inventario y comisiones en tiempo real.</p>
-      </div>
-
-      <div class="feature-pills">
-        <div class="feature-pill"><i class="bi bi-shield-check"></i> Arqueo Ciego</div>
-        <div class="feature-pill"><i class="bi bi-scissors"></i> Comisiones 50%</div>
-        <div class="feature-pill"><i class="bi bi-upc-scan"></i> Lector USB</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Zona Derecha: Formulario Funcional de Acceso -->
-  <div class="card-form-pane">
-    <div>
-      <div class="form-header">
-        <div class="app-icon">
-          <img src="{% static 'img/petpos-paw.svg' %}" alt="PetPOS Pro" width="28" height="28">
-        </div>
-        <h1>Acceso al Sistema</h1>
-        <p>Ingresa tus credenciales de administrador para gestionar tu negocio.</p>
-      </div>
-
-      {% if form.errors %}
-      <div class="error-alert">
-        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-        <div><strong>Credenciales inválidas.</strong> Verifica tu usuario y contraseña.</div>
-      </div>
-      {% endif %}
-
-      <form method="post" id="loginForm">
-        {% csrf_token %}
-
-        <div class="input-group-custom">
-          <label class="input-label" for="id_username">Usuario Administrador</label>
-          <div class="input-box">
-            <i class="bi bi-person-fill prefix-icon"></i>
-            <input type="text" name="username" id="id_username" placeholder="admin" required autofocus autocomplete="username">
-          </div>
-        </div>
-
-        <div class="input-group-custom">
-          <label class="input-label" for="id_password">Contraseña</label>
-          <div class="input-box">
-            <i class="bi bi-lock-fill prefix-icon"></i>
-            <input type="password" name="password" id="id_password" placeholder="••••••••" required autocomplete="current-password">
-            <i class="bi bi-eye toggle-pwd" id="pwdToggle" title="Mostrar/ocultar contraseña"></i>
-          </div>
-        </div>
-
-        <button type="submit" class="btn-submit" id="btnSubmit">
-          <span>Ingresar a PetPOS Pro</span>
-          <i class="bi bi-arrow-right"></i>
-        </button>
-      </form>
+      <div class="brand-title">PetPOS Pro</div>
     </div>
 
-    <!-- Pie con Seguridad y Firma de Alpha Web Studio -->
-    <div class="login-footer-zone">
-      <div class="security-badge">
-        <i class="bi bi-shield-check text-success"></i> Acceso seguro &bull; PetPOS Pro v2.2
+    <!-- Mensaje de Error en caso de credenciales incorrectas -->
+    {% if form.errors %}
+    <div class="error-alert">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>Usuario o contraseña incorrectos.</span>
+    </div>
+    {% endif %}
+
+    <!-- Formulario de Acceso Funcional -->
+    <form method="post" id="loginForm">
+      {% csrf_token %}
+
+      <div class="input-group-custom">
+        <label class="input-label" for="id_username">Usuario</label>
+        <div class="input-box">
+          <i class="bi bi-person-fill prefix-icon"></i>
+          <input type="text" name="username" id="id_username" placeholder="Usuario" required autofocus autocomplete="username">
+        </div>
       </div>
-      <div class="alpha-signature-login">
-        <img src="{% static 'img/alpha-logo.svg' %}" alt="Alpha Web Studio" width="14" height="14">
-        <span>Desarrollado con tecnología por <strong>Alpha Web Studio</strong></span>
+
+      <div class="input-group-custom">
+        <label class="input-label" for="id_password">Contraseña</label>
+        <div class="input-box">
+          <i class="bi bi-lock-fill prefix-icon"></i>
+          <input type="password" name="password" id="id_password" placeholder="Contraseña" required autocomplete="current-password">
+          <i class="bi bi-eye toggle-pwd" id="pwdToggle" title="Mostrar/ocultar contraseña"></i>
+        </div>
       </div>
+
+      <button type="submit" class="btn-submit" id="btnSubmit">
+        <span>Iniciar Sesión</span>
+        <i class="bi bi-arrow-right"></i>
+      </button>
+    </form>
+
+    <!-- Firma discreta Alpha Web Studio -->
+    <div class="signature-compact">
+      <img src="{% static 'img/alpha-logo.svg' %}" alt="Alpha Web Studio" width="12" height="12" style="opacity: 0.7;">
+      <span>Desarrollado por <strong>Alpha Web Studio</strong></span>
     </div>
   </div>
 </div>
 
 <script>
-  // Alternar visibilidad de contraseña
+  // Mostrar u ocultar contraseña
   const pwdInput = document.getElementById('id_password');
   const pwdToggle = document.getElementById('pwdToggle');
   
@@ -450,7 +302,7 @@
     pwdToggle.className = isPassword ? 'bi bi-eye-slash toggle-pwd' : 'bi bi-eye toggle-pwd';
   });
 
-  // Indicador de carga en envío de formulario
+  // Indicador de carga en envío de credenciales
   document.getElementById('loginForm').addEventListener('submit', () => {
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true;
