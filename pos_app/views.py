@@ -1492,13 +1492,18 @@ def proveedores_list(request):
     q = request.GET.get('q', '').strip()
     estado = request.GET.get('estado', '')
 
-    proveedores = Proveedor.objects.all().annotate(
+    todos = Proveedor.objects.all()
+    total_proveedores = todos.count()
+    total_activos = todos.filter(activo=True).count()
+    total_inactivos = todos.filter(activo=False).count()
+
+    proveedores = todos.annotate(
         total_compras=Count('compras')
-    )
+    ).order_by('nombre')
 
     if q:
         proveedores = proveedores.filter(
-            Q(nombre__icontains=q) | Q(contacto__icontains=q) | Q(nit__icontains=q) | Q(telefono__icontains=q)
+            Q(nombre__icontains=q) | Q(contacto__icontains=q) | Q(nit__icontains=q) | Q(telefono__icontains=q) | Q(email__icontains=q)
         )
     if estado == 'activo':
         proveedores = proveedores.filter(activo=True)
@@ -1509,18 +1514,21 @@ def proveedores_list(request):
         'proveedores': proveedores,
         'q': q,
         'estado_sel': estado,
+        'total_proveedores': total_proveedores,
+        'total_activos': total_activos,
+        'total_inactivos': total_inactivos,
     })
 
 
 @login_required
 def proveedor_crear(request):
     """Registra un nuevo proveedor en el sistema."""
+    next_url = request.GET.get('next') or request.POST.get('next')
     if request.method == 'POST':
         form = ProveedorForm(request.POST)
         if form.is_valid():
             prov = form.save()
             messages.success(request, f"Proveedor '{prov.nombre}' registrado exitosamente.")
-            next_url = request.GET.get('next')
             if next_url:
                 return redirect(next_url)
             return redirect('proveedores_list')
@@ -1528,7 +1536,9 @@ def proveedor_crear(request):
         form = ProveedorForm(initial={'activo': True})
     return render(request, 'compras/proveedor_form.html', {
         'form': form,
-        'titulo': 'Nuevo Proveedor'
+        'titulo': 'Nuevo Proveedor',
+        'es_edicion': False,
+        'next_url': next_url,
     })
 
 
@@ -1536,18 +1546,23 @@ def proveedor_crear(request):
 def proveedor_editar(request, pk):
     """Edita la información de un proveedor existente."""
     proveedor = get_object_or_404(Proveedor, pk=pk)
+    next_url = request.GET.get('next') or request.POST.get('next')
     if request.method == 'POST':
         form = ProveedorForm(request.POST, instance=proveedor)
         if form.is_valid():
             form.save()
             messages.success(request, f"Proveedor '{proveedor.nombre}' actualizado con éxito.")
+            if next_url:
+                return redirect(next_url)
             return redirect('proveedores_list')
     else:
         form = ProveedorForm(instance=proveedor)
     return render(request, 'compras/proveedor_form.html', {
         'form': form,
         'proveedor': proveedor,
-        'titulo': f'Editar: {proveedor.nombre}'
+        'titulo': f'Editar: {proveedor.nombre}',
+        'es_edicion': True,
+        'next_url': next_url,
     })
 
 

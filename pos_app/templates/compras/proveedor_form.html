@@ -1,156 +1,166 @@
 {% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}{{ accion }} Proveedor — PetPOS Pro{% endblock %}
+{% block title %}{{ titulo }} — PetPOS Pro{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'proveedores_list' %}{% endif %}" class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center transition shadow-sm">
-                <i class="fas fa-arrow-left text-sm"></i>
-            </a>
-            <div>
-                <h1 class="text-2xl font-black text-slate-800 tracking-tight">{{ accion }} Proveedor</h1>
-                <p class="text-xs text-slate-500 font-medium">{% if proveedor %}Modificación de ficha comercial de {{ proveedor.nombre }}{% else %}Registro de distribuidor, laboratorio o casa comercial{% endif %}</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Alert / Tips -->
-    <div class="bg-amber-50/70 border border-amber-200/60 rounded-2xl p-4 flex items-start gap-3">
-        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-sm">
-            <i class="fas fa-lightbulb"></i>
-        </div>
-        <div class="text-xs text-amber-900 leading-relaxed">
-            <span class="font-bold">Información para Compras y Facturación:</span>
-            Registrar el NIT y los datos de contacto del proveedor permite emitir órdenes de compra claras, llevar control de costos y asociar las entradas de stock automáticamente.
-        </div>
-    </div>
-
-    <!-- Main Card -->
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8">
-        <form method="post" class="space-y-6">
-            {% if next_url %}
-                <input type="hidden" name="next" value="{{ next_url }}">
-            {% endif %}
-            {% csrf_token %}
-
-            {% if form.non_field_errors %}
-            <div class="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl text-xs space-y-1">
-                {% for err in form.non_field_errors %}
-                    <p class="flex items-center gap-2"><i class="fas fa-exclamation-circle"></i> {{ err }}</p>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- Company Info Section -->
-            <div>
-                <h2 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <i class="fas fa-building text-amber-500"></i> Datos Comerciales de la Empresa
-                </h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                            Razón Social / Nombre Comercial <span class="text-rose-500">*</span>
-                        </label>
-                        {{ form.nombre }}
-                        {% if form.nombre.errors %}
-                            <p class="text-[11px] text-rose-600 font-medium mt-1">{{ form.nombre.errors.0 }}</p>
-                        {% endif %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10 col-12">
+        <div class="card-pos">
+            <!-- Header de la Tarjeta -->
+            <div class="card-pos-header">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--brand-glow); color: var(--brand-emerald); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                        <i class="bi bi-truck"></i>
                     </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                            NIT / Documento Tributario
-                        </label>
-                        {{ form.nit }}
-                        {% if form.nit.errors %}
-                            <p class="text-[11px] text-rose-600 font-medium mt-1">{{ form.nit.errors.0 }}</p>
-                        {% endif %}
-                        <p class="text-[10px] text-slate-400 mt-1">Identificador fiscal único para compras y facturas.</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                            Persona o Asesor de Contacto
-                        </label>
-                        {{ form.contacto }}
-                        {% if form.contacto.errors %}
-                            <p class="text-[11px] text-rose-600 font-medium mt-1">{{ form.contacto.errors.0 }}</p>
-                        {% endif %}
-                        <p class="text-[10px] text-slate-400 mt-1">Ej: Asesor de ventas o representante comercial.</p>
-                    </div>
+                    <span>{{ titulo }}</span>
                 </div>
-            </div>
-
-            <hr class="border-slate-100">
-
-            <!-- Contact & Location -->
-            <div>
-                <h2 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <i class="fas fa-address-book text-amber-500"></i> Canales de Contacto y Ubicación
-                </h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                            Teléfono / Móvil / WhatsApp
-                        </label>
-                        {{ form.telefono }}
-                        {% if form.telefono.errors %}
-                            <p class="text-[11px] text-rose-600 font-medium mt-1">{{ form.telefono.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                            Correo Electrónico
-                        </label>
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                            <p class="text-[11px] text-rose-600 font-medium mt-1">{{ form.email.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                            Dirección Física / Bodega / Ciudad
-                        </label>
-                        {{ form.direccion }}
-                        {% if form.direccion.errors %}
-                            <p class="text-[11px] text-rose-600 font-medium mt-1">{{ form.direccion.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <hr class="border-slate-100">
-
-            <!-- Estado -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200/60 flex items-center justify-between">
-                <div>
-                    <span class="block text-xs font-bold text-slate-800">Proveedor Activo</span>
-                    <span class="block text-[11px] text-slate-500">Si está inactivo, no aparecerá en el listado de nuevas compras</span>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    {{ form.activo }}
-                </label>
-            </div>
-
-            <!-- Action buttons -->
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'proveedores_list' %}{% endif %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
-                    Cancelar
+                <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'proveedores_list' %}{% endif %}" class="btn-outline-pos" style="font-size: 13px;">
+                    <i class="bi bi-arrow-left me-1"></i> Volver
                 </a>
-                <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/25 transition flex items-center gap-2">
-                    <i class="fas fa-save"></i>
-                    <span>Guardar Proveedor</span>
-                </button>
             </div>
-        </form>
+
+            <!-- Cuerpo del Formulario -->
+            <div class="card-pos-body p-4">
+                <form method="post" id="proveedorForm">
+                    {% csrf_token %}
+                    {% if next_url %}
+                    <input type="hidden" name="next" value="{{ next_url }}">
+                    {% endif %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger" style="font-size: 13px; border-radius: var(--radius-sm);">
+                        {% for err in form.non_field_errors %}
+                        <div><i class="bi bi-exclamation-circle me-1"></i>{{ err }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Grupo 1: Información Comercial -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                            <i class="bi bi-building text-success" style="font-size: 16px;"></i>
+                            <h6 class="fw-bold mb-0" style="color: var(--brand-deep); font-size: 14px;">Información Comercial</h6>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-7 col-12">
+                                <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main);">
+                                    Nombre Comercial / Razón Social <span class="text-danger">*</span>
+                                </label>
+                                {{ form.nombre }}
+                                {% if form.nombre.errors %}
+                                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.nombre.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-5 col-12">
+                                <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main);">
+                                    Identificación Tributaria (NIT)
+                                </label>
+                                {{ form.nit }}
+                                {% if form.nit.errors %}
+                                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.nit.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1" style="font-size: 11px;">Identificador fiscal para compras y facturas.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grupo 2: Información de Contacto -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                            <i class="bi bi-person-lines-fill text-success" style="font-size: 16px;"></i>
+                            <h6 class="fw-bold mb-0" style="color: var(--brand-deep); font-size: 14px;">Información de Contacto</h6>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4 col-12">
+                                <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main);">
+                                    Persona de Contacto
+                                </label>
+                                {{ form.contacto }}
+                                {% if form.contacto.errors %}
+                                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.contacto.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4 col-12">
+                                <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main);">
+                                    Teléfono / WhatsApp
+                                </label>
+                                {{ form.telefono }}
+                                {% if form.telefono.errors %}
+                                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.telefono.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4 col-12">
+                                <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main);">
+                                    Correo Electrónico
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.email.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grupo 3: Ubicación -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                            <i class="bi bi-geo-alt text-success" style="font-size: 16px;"></i>
+                            <h6 class="fw-bold mb-0" style="color: var(--brand-deep); font-size: 14px;">Ubicación</h6>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main);">
+                                    Dirección Física / Ciudad / Bodega
+                                </label>
+                                {{ form.direccion }}
+                                {% if form.direccion.errors %}
+                                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.direccion.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grupo 4: Estado y Habilitación -->
+                    <div class="mb-4 p-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <div class="form-check form-switch m-0 d-flex align-items-center justify-content-between p-0">
+                            <div>
+                                <label class="form-check-label fw-bold d-block" for="{{ form.activo.id_for_label }}" style="color: var(--brand-petroleum); font-size: 13px;">
+                                    Proveedor Habilitado / Activo
+                                </label>
+                                <small class="text-muted" style="font-size: 12px;">
+                                    Los proveedores inactivos se conservan en el historial pero no aparecen en el selector de nuevas compras.
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                {{ form.activo }}
+                            </div>
+                        </div>
+                        {% if form.activo.errors %}
+                        <div class="text-danger mt-1" style="font-size: 12px;">{{ form.activo.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="d-flex justify-content-end align-items-center gap-3 pt-3 border-top" style="border-color: var(--border-color) !important;">
+                        <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'proveedores_list' %}{% endif %}" class="btn-outline-pos">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn-accent" style="min-width: 170px;">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if es_edicion %}Guardar Cambios{% else %}Registrar Proveedor{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -2,178 +2,184 @@
 {% load static %}
 
 {% block title %}Ficha de Proveedor: {{ proveedor.nombre }} — PetPOS Pro{% endblock %}
+{% block page_title %}Detalle de Proveedor{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div class="flex items-center gap-3">
-            <a href="{% url 'proveedores_list' %}" class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center transition shadow-sm">
-                <i class="fas fa-arrow-left text-sm"></i>
-            </a>
-            <div>
-                <div class="flex items-center gap-2">
-                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">{{ proveedor.nombre }}</h1>
-                    {% if proveedor.activo %}
-                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Activo
-                        </span>
+<!-- Cabecera de la Ficha -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+        <a href="{% url 'proveedores_list' %}" class="btn-outline-pos" title="Volver al listado">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="fw-bold mb-0" style="color: var(--brand-deep); letter-spacing: -0.3px;">{{ proveedor.nombre }}</h5>
+                {% if proveedor.activo %}
+                <span class="badge-pos badge-success"><i class="bi bi-check-circle-fill"></i> Activo</span>
+                {% else %}
+                <span class="badge-pos badge-danger"><i class="bi bi-pause-circle-fill"></i> Inactivo</span>
+                {% endif %}
+            </div>
+            <small class="text-muted" style="font-size: 12px;">NIT: {{ proveedor.nit|default:"Sin registrar" }}</small>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'compra_registrar' %}" class="btn-accent" title="Registrar factura con este proveedor">
+            <i class="bi bi-cart-plus me-1"></i> Nueva Compra
+        </a>
+        <a href="{% url 'proveedor_editar' proveedor.pk %}" class="btn-outline-pos" title="Editar datos del proveedor">
+            <i class="bi bi-pencil me-1"></i> Editar
+        </a>
+        <form action="{% url 'proveedor_toggle_activo' proveedor.pk %}" method="post" class="d-inline m-0">
+            {% csrf_token %}
+            <button type="submit" class="btn-outline-pos" style="{% if proveedor.activo %}color: var(--state-warning); border-color: rgba(217, 119, 6, 0.3);{% else %}color: var(--brand-emerald); border-color: rgba(35, 155, 114, 0.3);{% endif %}" title="{% if proveedor.activo %}Desactivar proveedor{% else %}Activar proveedor{% endif %}">
+                <i class="bi {% if proveedor.activo %}bi-pause-fill{% else %}bi-play-fill{% endif %} me-1"></i>
+                {% if proveedor.activo %}Desactivar{% else %}Habilitar{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Información General y Comercial -->
+    <div class="col-lg-4 col-md-5 col-12">
+        <div class="card-pos h-100">
+            <div class="card-pos-header">
+                <span><i class="bi bi-id-card me-2" style="color: var(--brand-emerald);"></i>Datos Comerciales</span>
+            </div>
+            <div class="card-pos-body">
+                <div class="mb-3 pb-3 border-bottom" style="border-color: var(--border-subtle) !important;">
+                    <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Razón Social</small>
+                    <span class="fw-bold" style="color: var(--brand-petroleum); font-size: 14px;">{{ proveedor.nombre }}</span>
+                </div>
+
+                <div class="mb-3 pb-3 border-bottom" style="border-color: var(--border-subtle) !important;">
+                    <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Identificación Tributaria (NIT)</small>
+                    <span style="font-family: monospace; font-size: 13px; font-weight: 600; color: var(--text-main);">
+                        {{ proveedor.nit|default:"Sin registrar" }}
+                    </span>
+                </div>
+
+                <div class="mb-3 pb-3 border-bottom" style="border-color: var(--border-subtle) !important;">
+                    <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Persona de Contacto</small>
+                    <span style="color: var(--text-main); font-size: 13px;">{{ proveedor.contacto|default:"Sin registrar" }}</span>
+                </div>
+
+                <div class="mb-3 pb-3 border-bottom" style="border-color: var(--border-subtle) !important;">
+                    <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Teléfono / WhatsApp</small>
+                    {% if proveedor.telefono %}
+                    <a href="tel:{{ proveedor.telefono }}" style="color: var(--brand-emerald); font-weight: 600; text-decoration: none; font-size: 13px;">
+                        <i class="bi bi-telephone me-1"></i>{{ proveedor.telefono }}
+                    </a>
                     {% else %}
-                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactivo
-                        </span>
+                    <span style="color: var(--text-light); font-size: 13px;">Sin registrar</span>
                     {% endif %}
                 </div>
-                <p class="text-xs text-slate-500 font-medium">NIT: {{ proveedor.nit|default:"Sin NIT registrado" }}</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-2">
-            <a href="{% url 'compra_registrar' %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition">
-                <i class="fas fa-cart-plus"></i>
-                <span>Registrar Compra con este Proveedor</span>
-            </a>
-            <a href="{% url 'proveedor_editar' proveedor.pk %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm">
-                <i class="fas fa-edit text-amber-500"></i>
-                <span>Editar</span>
-            </a>
-            <a href="{% url 'proveedor_toggle_activo' proveedor.pk %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm">
-                <i class="fas {% if proveedor.activo %}fa-ban text-amber-500{% else %}fa-check text-emerald-500{% endif %}"></i>
-                <span>{% if proveedor.activo %}Desactivar{% else %}Habilitar{% endif %}</span>
-            </a>
-        </div>
-    </div>
 
-    <!-- Supplier Info Cards -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Contact & Business Card -->
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
-            <h2 class="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <i class="fas fa-id-card text-amber-500"></i> Datos Generales
-            </h2>
+                <div class="mb-3 pb-3 border-bottom" style="border-color: var(--border-subtle) !important;">
+                    <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Correo Electrónico</small>
+                    {% if proveedor.email %}
+                    <a href="mailto:{{ proveedor.email }}" style="color: var(--text-muted); text-decoration: none; font-size: 13px;">
+                        <i class="bi bi-envelope me-1"></i>{{ proveedor.email }}
+                    </a>
+                    {% else %}
+                    <span style="color: var(--text-light); font-size: 13px;">Sin registrar</span>
+                    {% endif %}
+                </div>
 
-            <div class="space-y-3 text-xs">
                 <div>
-                    <span class="block text-[11px] font-semibold text-slate-400">Razón Social:</span>
-                    <span class="font-bold text-slate-800 text-sm">{{ proveedor.nombre }}</span>
+                    <small class="text-muted text-uppercase d-block fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">Dirección Física</small>
+                    <span style="color: var(--text-main); font-size: 13px;">{{ proveedor.direccion|default:"Sin registrar" }}</span>
                 </div>
-                <div>
-                    <span class="block text-[11px] font-semibold text-slate-400">NIT / Identificación Fiscal:</span>
-                    <span class="font-mono font-semibold text-slate-700">{{ proveedor.nit|default:"No registrado" }}</span>
-                </div>
-                <div>
-                    <span class="block text-[11px] font-semibold text-slate-400">Persona de Contacto:</span>
-                    <span class="font-semibold text-slate-800">{{ proveedor.contacto|default:"No registrado" }}</span>
-                </div>
-                <div>
-                    <span class="block text-[11px] font-semibold text-slate-400">Teléfono / WhatsApp:</span>
-                    <span class="font-semibold text-slate-800">
-                        {% if proveedor.telefono %}
-                            <a href="tel:{{ proveedor.telefono }}" class="text-emerald-600 hover:underline">{{ proveedor.telefono }}</a>
-                        {% else %}
-                            <span class="text-slate-400 italic">No registrado</span>
-                        {% endif %}
-                    </span>
-                </div>
-                <div>
-                    <span class="block text-[11px] font-semibold text-slate-400">Correo Electrónico:</span>
-                    <span class="font-semibold text-slate-800">
-                        {% if proveedor.email %}
-                            <a href="mailto:{{ proveedor.email }}" class="text-indigo-600 hover:underline">{{ proveedor.email }}</a>
-                        {% else %}
-                            <span class="text-slate-400 italic">No registrado</span>
-                        {% endif %}
-                    </span>
-                </div>
-                <div>
-                    <span class="block text-[11px] font-semibold text-slate-400">Dirección Física / Ubicación:</span>
-                    <span class="text-slate-700">{{ proveedor.direccion|default:"No registrada" }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Financial KPI Cards -->
-        <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-500/20 flex flex-col justify-between">
-                <div>
-                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg mb-4">
-                        <i class="fas fa-boxes-stacked"></i>
-                    </div>
-                    <p class="text-xs uppercase tracking-wider font-semibold text-indigo-100">Total Compras Realizadas</p>
-                    <p class="text-3xl font-black mt-1">{{ total_compras }}</p>
-                </div>
-                <p class="text-[11px] text-indigo-200 mt-4">Facturas o remisiones de mercancía registradas</p>
-            </div>
-
-            <div class="bg-gradient-to-br from-amber-500 to-amber-700 rounded-2xl p-6 text-white shadow-lg shadow-amber-500/20 flex flex-col justify-between">
-                <div>
-                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg mb-4">
-                        <i class="fas fa-money-bill-wave"></i>
-                    </div>
-                    <p class="text-xs uppercase tracking-wider font-semibold text-amber-100">Volumen Total Comprado</p>
-                    <p class="text-3xl font-black mt-1">${{ monto_total|floatformat:2 }}</p>
-                </div>
-                <p class="text-[11px] text-amber-100 mt-4">Monto acumulado histórico en inventario</p>
             </div>
         </div>
     </div>
 
-    <!-- Purchases History Table -->
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-file-invoice text-amber-500 text-sm"></i>
-                <h3 class="font-bold text-slate-800 text-sm">Historial de Compras y Suministros</h3>
+    <!-- Indicadores Financieros de Compras y Tabla Histórica -->
+    <div class="col-lg-8 col-md-7 col-12">
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-12">
+                <div class="stat-card accent">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="stat-label mb-0">Total Compras Realizadas</span>
+                        <div class="stat-icon accent m-0" style="width: 36px; height: 36px; font-size: 16px;">
+                            <i class="bi bi-cart-check"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" style="font-size: 24px;">{{ compras|length }}</div>
+                    <div class="stat-sub">
+                        Facturas y recepciones registradas
+                    </div>
+                </div>
             </div>
-            <span class="text-xs font-semibold text-slate-400">{{ total_compras }} transacciones</span>
+
+            <div class="col-sm-6 col-12">
+                <div class="stat-card success">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="stat-label mb-0">Volumen Total Comprado</span>
+                        <div class="stat-icon success m-0" style="width: 36px; height: 36px; font-size: 16px;">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" style="font-size: 24px; color: var(--brand-deep);">${{ total_compras_valor|floatformat:0 }}</div>
+                    <div class="stat-sub">
+                        Monto acumulado en mercancía
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th class="py-3 px-4">Factura / N° Remisión</th>
-                        <th class="py-3 px-4">Fecha y Hora</th>
-                        <th class="py-3 px-4 text-center">Ítems / Unidades</th>
-                        <th class="py-3 px-4 text-right">Total Factura</th>
-                        <th class="py-3 px-4 text-right">Acción</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
-                    {% for c in compras %}
-                    <tr class="hover:bg-slate-50/60 transition">
-                        <td class="py-3 px-4 font-bold text-slate-800">
-                            <i class="fas fa-receipt text-slate-400 mr-1.5 text-xs"></i>
-                            {{ c.numero_factura|default:"Sin número" }}
-                        </td>
-                        <td class="py-3 px-4 text-slate-500 font-medium">
-                            {{ c.fecha|date:"d/m/Y H:i" }}
-                        </td>
-                        <td class="py-3 px-4 text-center font-medium">
-                            <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
-                                {{ c.detalles.count }} ítems
-                            </span>
-                        </td>
-                        <td class="py-3 px-4 text-right font-black text-slate-900">
-                            ${{ c.total|floatformat:2 }}
-                        </td>
-                        <td class="py-3 px-4 text-right">
-                            <a href="{% url 'compra_detalle' c.pk %}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] transition">
-                                <i class="fas fa-eye text-[10px]"></i>
-                                <span>Ver Compra</span>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="py-10 text-center text-slate-400">
-                            <i class="fas fa-shopping-cart text-slate-300 text-2xl mb-2"></i>
-                            <p class="font-bold text-slate-600">No hay compras registradas con este proveedor</p>
-                            <p class="text-xs text-slate-400 mt-1">Cuando registres una compra de mercancía asociada a este proveedor aparecerá aquí.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Historial de Compras -->
+        <div class="card-pos">
+            <div class="card-pos-header">
+                <span><i class="bi bi-receipt me-2" style="color: var(--brand-emerald);"></i>Historial de Compras Asociadas</span>
+                <span class="badge-pos badge-info">{{ compras|length }}</span>
+            </div>
+            <div class="table-responsive-pos">
+                <table class="table-pos">
+                    <thead>
+                        <tr>
+                            <th>N° Factura</th>
+                            <th>Fecha</th>
+                            <th>Método</th>
+                            <th>Estado</th>
+                            <th style="text-align: right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in compras %}
+                        <tr>
+                            <td style="font-weight: 700; color: var(--brand-petroleum);">
+                                <i class="bi bi-file-earmark-text me-1 text-muted"></i>
+                                {{ c.numero_factura_proveedor|default:"Sin número" }}
+                            </td>
+                            <td style="font-size: 12px; color: var(--text-muted);">
+                                {{ c.fecha|date:"d/m/Y H:i" }}
+                            </td>
+                            <td>
+                                <span class="badge-pos badge-info">{{ c.get_metodo_pago_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge-pos {% if c.estado == 'recibida_pagada' %}badge-success{% else %}badge-warning{% endif %}">
+                                    {{ c.get_estado_display }}
+                                </span>
+                            </td>
+                            <td style="text-align: right; font-weight: 800; color: var(--brand-deep);">
+                                ${{ c.total|floatformat:0 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 36px 16px; color: var(--text-muted);">
+                                <i class="bi bi-cart-x" style="font-size: 28px; color: var(--text-light); display: block; margin-bottom: 6px;"></i>
+                                Aún no se han registrado compras con este proveedor.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
